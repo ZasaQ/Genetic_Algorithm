@@ -1,133 +1,330 @@
 #include <iostream>
 #include <vector>
 #include <algorithm>
+#include <random>
+#include <numeric>
 
-//TODO: To jest ew. do poprawy, oba structy mam na mysli, wydaje mi sie ze mozna lepiej by to zrobic
-struct Point {
-    double x, y;
+
+struct Point 
+{
+    float x, y;
+
+    Point(float x, float y) : x(x), y(y) {}
 };
 
-struct Polygon {
-    std::vector<Point> points;
+struct Polygon 
+{
+    std::vector<Point> vertices;
+
+    Polygon() {}
+    Polygon(const std::vector<Point>& vertices) : vertices(vertices) {}
 };
 
-// Funkcja sprawdza, czy punkt C znajduje siê na lewo od odcinka AB, poza wnêtrzem wielok¹ta.
-bool isLeft(const Point& A, const Point& B, const Point& C) {
-    double crossProduct = (B.x - A.x) * (C.y - A.y) - (B.y - A.y) * (C.x - A.x);
+/*
+    template <class ForwardIterator, class T>
+    void iota(ForwardIterator first, ForwardIterator last, T val)
+    {
+        while (first != last) {
+            *first = val;
+            ++first;
+            ++val;
+        }
+    }
+*/
 
-    return crossProduct > 0;
-}
+std::vector<Point> computeLineSegmentRectangleIntersections(float p0x, float p0y, float p1x, float p1y, float r0x, float r0y, float r1x, float r1y)
+{
+    std::vector<Point> intersections;
 
-// Funkcja sprawdza, czy punkt C znajduje siê na prawo od odcinka AB, poza wnêtrzem wielok¹ta.
-bool isRight(const Point& A, const Point& B, const Point& C) {
-    double crossProduct = (B.x - A.x) * (C.y - A.y) - (B.y - A.y) * (C.x - A.x);
+    // Obliczanie równañ linii
+    float dx = p1x - p0x;
+    float dy = p1y - p0y;
+    float drx = r1x - r0x;
+    float dry = r1y - r0y;
 
-    return crossProduct < 0;
-}
+    float determinant = dx * dry - drx * dy;
 
-// Funkcja sprawdza, czy punkt C le¿y na odcinku AB.
-bool isOnSegment(const Point& A, const Point& B, const Point& C) {
-    return ((C.x >= std::min(A.x, B.x)) && (C.x <= std::max(A.x, B.x)) &&
-        (C.y >= std::min(A.y, B.y)) && (C.y <= std::max(A.y, B.y)) &&
-        ((B.x - A.x) * (C.y - A.y) == (B.y - A.y) * (C.x - A.x)));
-}
-
-// Funkcja sprawdza, czy odcinki AB i CD przecinaj¹ siê
-bool doIntersect(const Point& A, const Point& B, const Point& C, const Point& D) {
-    if (isOnSegment(A, B, C) || isOnSegment(A, B, D) || isOnSegment(C, D, A) || isOnSegment(C, D, B)) {
-        return false;
+    // Sprawdzanie czy odcinek i prostok¹t s¹ równoleg³e
+    if (determinant == 0)
+    {
+        return intersections; // Brak przeciêæ
     }
 
-    return (isLeft(A, B, C) != isLeft(A, B, D)) && (isLeft(C, D, A) != isLeft(C, D, B));
-}
+    // Obliczanie parametrów przeciêcia
+    float t = ((r0x - p0x) * dry - (r0y - p0y) * drx) / determinant;
+    float u = ((r0x - p0x) * dy - (r0y - p0y) * dx) / determinant;
 
-// Funkcja sprawdza, czy punkt P jest zawarty wewn¹trz wielok¹ta poly.
-bool isInside(const Point& P, const Polygon& poly) {
-    int numPoints = poly.points.size();
-    bool inside = false;
-
-    for (int i = 0, j = numPoints - 1; i < numPoints; j = i++) {
-        if (((poly.points[i].y > P.y) != (poly.points[j].y > P.y)) &&
-            (P.x < (poly.points[j].x - poly.points[i].x) * (P.y - poly.points[i].y) / (poly.points[j].y - poly.points[i].y) + poly.points[i].x))
-            inside = !inside;
+    // Sprawdzanie czy przeciêcie mieœci siê na odcinku i w prostok¹cie
+    if (t >= 0 && t <= 1 && u >= 0 && u <= 1) 
+    {
+        float intersectionX = p0x + t * dx;
+        float intersectionY = p0y + t * dy;
+        intersections.push_back(Point(intersectionX, intersectionY));
     }
 
-    return inside;
+    return intersections;
 }
 
-// Funkcja oblicza przeciêcie odcinka AB z wielok¹tem polygon i zwraca przeciêty fragment jako nowy wielok¹t.
-Polygon getIntersectionPolygon(const Point& A, const Point& B, const Polygon& polygon) {
-    Polygon intersectedPolygon;
-    const size_t n = polygon.points.size();
+std::vector<float> computeLineRectangleIntersections(float p0x, float p0y, float p1x, float p1y, float r0x, float r0y, float r1x, float r1y)
+{
+    std::vector<float> intersections;
 
-    for (size_t i = 0; i < n; ++i) {
-        size_t nextIndex = (i + 1) % n;
-        const Point& C = polygon.points[i];
-        const Point& D = polygon.points[nextIndex];
+    // Obliczanie równañ linii
+    float dx = p1x - p0x;
+    float dy = p1y - p0y;
+    float drx = r1x - r0x;
+    float dry = r1y - r0y;
 
-        if (doIntersect(A, B, C, D)) {
-            // Zmienne przechowuj¹ wspó³rzêdne punktów przeciêcia odcinków AB i CD:
-            // Dla X
-            double intersectionX = 
-                ((C.x * D.y - C.y * D.x) * (A.x - B.x) -
-                (A.x * B.y - A.y * B.x) * (C.x - D.x)) /
-                ((C.x - D.x) * (A.y - B.y) - (A.x - B.x) * (C.y - D.y));
-            // Dla Y
-            double intersectionY = 
-                ((C.x * D.y - C.y * D.x) * (A.y - B.y) -
-                (A.x * B.y - A.y * B.x) * (C.y - D.y)) /
-                ((C.x - D.x) * (A.y - B.y) - (A.x - B.x) * (C.y - D.y));
+    float determinant = dx * dry - drx * dy;
 
-            intersectedPolygon.points.push_back({ intersectionX, intersectionY });
+    // Sprawdzanie czy odcinek i prostok¹t s¹ równoleg³e
+    if (determinant == 0)
+    {
+        return intersections; // Brak przeciêæ
+    }
+
+    // Obliczanie parametrów przeciêcia
+    float t = ((r0x - p0x) * dry - (r0y - p0y) * drx) / determinant;
+    float u = ((r0x - p0x) * dy - (r0y - p0y) * dx) / determinant;
+
+    // Sprawdzanie czy przeciêcie mieœci siê na odcinku i w prostok¹cie
+    if (t >= 0 && t <= 1 && u >= 0 && u <= 1)
+    {
+        float intersectionX = p0x + t * dx;
+        float intersectionY = p0y + t * dy;
+        intersections.push_back(intersectionX);
+        intersections.push_back(intersectionY);
+    }
+
+    return intersections;
+}
+
+// Funkcja zwaracj¹ca liczbê przeciêæ miêdzy wielok¹tami, zastosowany zosta³ tutaj algorytm SAT(Separating Axis Theorem)
+int countIntersections(const Polygon& poly1, const Polygon& poly2)
+{
+    int intersectionCount = 0;
+
+    // Sprawdzanie przeciêæ dla ka¿dej krawêdzi obu wielok¹tów
+    for (size_t i = 0; i < poly1.vertices.size(); ++i)
+    {
+        size_t j = (i + 1) % poly1.vertices.size();
+
+        float x0 = poly1.vertices[i].x;
+        float y0 = poly1.vertices[i].y;
+        float x1 = poly1.vertices[j].x;
+        float y1 = poly1.vertices[j].y;
+
+        for (size_t k = 0; k < poly2.vertices.size(); ++k)
+        {
+            size_t l = (k + 1) % poly2.vertices.size();
+
+            float x2 = poly2.vertices[k].x;
+            float y2 = poly2.vertices[k].y;
+            float x3 = poly2.vertices[l].x;
+            float y3 = poly2.vertices[l].y;
+
+            std::vector<float> intersections = computeLineRectangleIntersections(x0, y0, x1, y1, x2, y2, x3, y3);
+            if (!intersections.empty())
+            {
+                intersectionCount += intersections.size() / 2;
+            }
         }
     }
 
-    return intersectedPolygon;
+    return intersectionCount;
 }
 
-// Funkcja oblicza minimaln¹ liczbê nachodz¹cych na siebie maksymalnych wielok¹tów wypuk³ych pokrywaj¹cych dany wielok¹t.
-int getMinimumOverlappingPolygons(const Polygon& polygon) {
-    const size_t n = polygon.points.size();
-    std::vector<std::vector<int>> overlappingPolygons(n, std::vector<int>(n, 0));
+// Funkcja obliczaj¹ca ocenê dostosowania (fitness) osobnika
+int fitnessFunction(const std::vector<Polygon>& population)
+{
+    int totalIntersections = 0;
 
-    for (size_t i = 2; i < n; ++i) {
-        for (size_t j = 0; j < n - i; ++j) {
-            size_t k = i + j;
-            overlappingPolygons[j][k] = std::numeric_limits<int>::max();
-
-            for (size_t m = j + 1; m < k; ++m) {
-                overlappingPolygons[j][k] = std::min(
-                    overlappingPolygons[j][k],
-                    overlappingPolygons[j][m] + overlappingPolygons[m][k] + 1
-                );
-            }
-
-            Polygon intersectionPolygon = getIntersectionPolygon(
-                polygon.points[j], polygon.points[k], polygon
-            );
-
-            if (!intersectionPolygon.points.empty()) {
-                overlappingPolygons[j][k] = std::min(
-                    overlappingPolygons[j][k],
-                    getMinimumOverlappingPolygons(intersectionPolygon)
-                );
-            }
+    // Obliczanie liczby przeciêæ dla ka¿dej pary osobników w populacji
+    for (size_t i = 0; i < population.size(); ++i)
+    {
+        for (size_t j = i + 1; j < population.size(); ++j)
+        {
+            totalIntersections += countIntersections(population[i], population[j]);
         }
     }
 
-    return overlappingPolygons[0][n - 1];
+    // Im mniejsza liczba przeciêæ, tym lepsze dostosowanie
+    return totalIntersections;
 }
 
+// Funkcja selekcji osobników
+std::vector<Polygon> selection(const std::vector<Polygon>& population, int numParents)
+{
+    // SprawdŸ poprawnoœæ parametrów
+    if (numParents <= 0 || numParents > population.size())
+    {
+        throw std::invalid_argument("Nieprawid³owa liczba rodziców.");
+    }
+
+    // Utwórz kopiê populacji, aby unikn¹æ modyfikacji oryginalnej populacji
+    std::vector<Polygon> populationCopy = population;
+
+    // Sortuj populacjê w kolejnoœci rosn¹cej na podstawie liczby nachodz¹cych na siebie maksymalnych wielok¹tów
+    std::sort(populationCopy.begin(), populationCopy.end(), [&](const Polygon& a, const Polygon& b)
+        {
+        int aIntersections = countIntersections(a, populationCopy[0]);
+        int bIntersections = countIntersections(b, populationCopy[0]);
+        return aIntersections < bIntersections;
+        });
+
+    // Wybierz okreœlon¹ liczbê rodziców z posortowanej populacji
+    std::vector<Polygon> parents;
+    for (int i = 0; i < numParents; ++i)
+    {
+        parents.push_back(populationCopy[i]);
+    }
+
+    return parents;
+}
+
+// Funkcja krzy¿owania osobników
+std::vector<Polygon> crossover(const std::vector<Polygon>& parents)
+{
+    std::vector<Polygon> offspring;
+
+    // Sprawdzenie, czy liczba rodziców jest wystarczaj¹ca
+    if (parents.size() < 2)
+    {
+        return offspring; // Zwróæ pust¹ populacjê potomstwa
+    }
+
+    // Wybór punktu krzy¿owania
+    size_t crossoverPoint = rand() % parents[0].vertices.size();
+
+    // Krzy¿owanie rodziców
+    for (size_t i = 0; i < parents.size() - 1; i += 2)
+    {
+        const Polygon& parent1 = parents[i];
+        const Polygon& parent2 = parents[i + 1];
+
+        Polygon child(parent1);
+
+        // Skopiowanie czêœci genotypu z rodzica 1 przed punktem krzy¿owania
+        for (size_t j = 0; j < crossoverPoint; ++j)
+        {
+            child.vertices.push_back(parent1.vertices[j]);
+        }
+
+        // Skopiowanie czêœci genotypu z rodzica 2 po punkcie krzy¿owania
+        for (size_t j = crossoverPoint; j < parent2.vertices.size(); ++j)
+        {
+            child.vertices.push_back(parent2.vertices[j]);
+        }
+
+        offspring.push_back(child);
+    }
+
+    return offspring;
+}
+
+float randDouble(float min, float max)
+{
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<float> dis(min, max);
+    return dis(gen);
+}
+
+// Funkcja mutacji osobników
+void mutate(std::vector<Polygon>& population, float mutationRate) 
+{
+    for (auto& polygon : population)
+    {
+        // Dla ka¿dego osobnika w populacji
+
+        for (auto& vertex : polygon.vertices)
+        {
+            // Dla ka¿dego wierzcho³ka w osobniku
+
+            if (randDouble(0, 1) < mutationRate)
+            {
+                // Wykonaj mutacjê z prawdopodobieñstwem mutationRate
+
+                float newX = vertex.x + randDouble(-1, 1);
+                float newY = vertex.y + randDouble(-1, 1);
+
+                vertex.x = newX;
+                vertex.y = newY;
+            }
+        }
+    }
+}
+
+void randomPlacement(Polygon& polygon, float minX, float maxX, float minY, float maxY)
+{
+    // Resetowanie wierzcho³ków wielok¹ta
+    polygon.vertices.clear();
+
+    // Losowe rozmieszczenie wierzcho³ków
+    for (size_t i = 0; i < polygon.vertices.size(); ++i)
+    {
+        float x = randDouble(minX, maxX);
+        float y = randDouble(minY, maxY);
+        polygon.vertices[i] = Point(x, y);
+    }
+}
+
+// G³ówna funkcja algorytmu genetycznego
+std::vector<Polygon> geneticAlgorithm(const std::vector<Point>& initialPolygon, int populationSize, int numGenerations, float mutationRate)
+{
+    std::vector<Polygon> population(populationSize);
+
+    // Inicjalizacja populacji pocz¹tkowej
+    for (int i = 0; i < populationSize; ++i)
+    {
+        Polygon polygon(initialPolygon);
+        randomPlacement(polygon, 0.0f, 4.0f, 0.0f, 4.0f); // Losowe rozmieszczenie wierzcho³ków w zakresie [0, 1]
+        population[i] = polygon;
+    }
+
+    for (int generation = 0; generation < numGenerations; ++generation)
+    {
+        int fitness = fitnessFunction(population);
+
+        std::vector<Polygon> parents = selection(population, populationSize / 2);
+        std::vector<Polygon> offspring = crossover(parents);
+
+        mutate(offspring, mutationRate);
+        population = offspring;
+    }
+
+    return population;
+}
+
+std::ostream& operator << (std::ostream& out, std::vector<Polygon>& Polygon)
+{
+    return out << Polygon.size();
+}
 
 int main() {
-    // Przyk³adowe dane wejœciowe
-    std::vector<Polygon> polygons;
+    std::vector<Point> initialPolygon = {
+        {-5.0f, 5.0f},
+        {0.0f, 10.0f},
+        {5.0f, 5.0f},
+        {7.0f, 2.0f},
+        {10.0f, 0.0f},
+        {7.0f, -2.0f},
+        {5.0f, -5.0f},
+        {0.0f, -10.0f},
+        {-5.0f, -5.0f},
+        {-7.0f, -2.0f},
+        {-10.0f, 0.0f},
+        {-7.0f, 2.0f}
+    };
 
-    Polygon polygon;
-    polygon.points = { { {0, 0}, {4, 0}, {4, 4}, {0, 4} } };
+    int populationSize = 100;
+    int numGenerations = 50;
+    float mutationRate = 0.1f;
 
-    int minimumOverlappingPolygons = getMinimumOverlappingPolygons(polygon);
-    std::cout << "Minimalna liczba nachodzacych na siebie maksymalnych wielokatow: " << minimumOverlappingPolygons << std::endl;
+    // Wywo³anie algorytmu genetycznego
+    std::vector<Polygon> result = geneticAlgorithm(initialPolygon, populationSize, numGenerations, mutationRate);
+
+    std::cout << result;
 
     return 0;
 }
