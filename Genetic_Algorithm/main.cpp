@@ -164,13 +164,14 @@ std::vector<Polygon> selection(const std::vector<Polygon>& population, int numPa
     // Utwórz kopiê populacji, aby unikn¹æ modyfikacji oryginalnej populacji
     std::vector<Polygon> populationCopy = population;
 
-    // Sortuj populacjê w kolejnoœci rosn¹cej na podstawie liczby nachodz¹cych na siebie maksymalnych wielok¹tów
+    // Sortuj populacjê w kolejnoœci rosn¹cej na podstawie liczby nachodz¹cych na siebie maksymalnych wielok¹tów (lambda)
     std::sort(populationCopy.begin(), populationCopy.end(), [&](const Polygon& a, const Polygon& b)
         {
         int aIntersections = countIntersections(a, populationCopy[0]);
         int bIntersections = countIntersections(b, populationCopy[0]);
         return aIntersections < bIntersections;
-        });
+        }
+    );
 
     // Wybierz okreœlon¹ liczbê rodziców z posortowanej populacji
     std::vector<Polygon> parents;
