@@ -285,14 +285,14 @@ void randomPlacement(Polygon& polygon, float minX, float maxX, float minY, float
 }
 
 // G³ówna funkcja algorytmu genetycznego
-std::vector<Polygon> geneticAlgorithm(const std::vector<Point>& initialPolygon, int populationSize, int numGenerations, float mutationRate)
+std::vector<Polygon> geneticAlgorithm(const Polygon& initialPolygon, int populationSize, int numGenerations, float mutationRate)
 {
     std::vector<Polygon> population(populationSize);
 
     // Inicjalizacja populacji pocz¹tkowej
     for (int i = 0; i < populationSize; ++i)
     {
-        Polygon polygon(initialPolygon);
+        Polygon polygon = initialPolygon;
         randomPlacement(polygon, 0.0f, 1.0f, 0.0f, 1.0f); // Losowe rozmieszczenie wierzcho³ków w zakresie [0, 1]
         population[i] = polygon;
     }
@@ -317,7 +317,7 @@ std::ostream& operator << (std::ostream& out, std::vector<Polygon>& Polygon)
 }
 
 int main() {
-    std::vector<Point> initialPolygon = {
+    std::vector<Point> initialPolygonVertices = {
         {-5.0f, 5.0f},
         {0.0f, 10.0f},
         {5.0f, 5.0f},
@@ -331,6 +331,8 @@ int main() {
         {-10.0f, 0.0f},
         {-7.0f, 2.0f}
     };
+
+    Polygon initialPolygon = initialPolygonVertices;
 
     int populationSize = 100;
     int numGenerations = 50;
