@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <random>
 #include <numeric>
+#include <ctime>
 
 
 struct Point 
@@ -167,9 +168,9 @@ std::vector<Polygon> selection(const std::vector<Polygon>& population, int numPa
     // Sortuj populacjê w kolejnoœci rosn¹cej na podstawie liczby nachodz¹cych na siebie maksymalnych wielok¹tów (lambda)
     std::sort(populationCopy.begin(), populationCopy.end(), [&](const Polygon& a, const Polygon& b)
         {
-        int aIntersections = countIntersections(a, populationCopy[0]);
-        int bIntersections = countIntersections(b, populationCopy[0]);
-        return aIntersections < bIntersections;
+            int aIntersections = countIntersections(a, populationCopy[0]);
+            int bIntersections = countIntersections(b, populationCopy[0]);
+            return aIntersections < bIntersections;
         }
     );
 
@@ -223,12 +224,25 @@ std::vector<Polygon> crossover(const std::vector<Polygon>& parents)
     return offspring;
 }
 
-float randDouble(float min, float max)
+float randFloat(float min, float max)
 {
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_real_distribution<float> dis(min, max);
     return dis(gen);
+}
+
+float randomFloat(float min, float max)
+{
+    static bool randOnce = true;
+
+    if (randOnce)
+    {
+        std::srand(static_cast<unsigned int>(std::time(NULL)));
+        randOnce = false;
+    }
+    float normalized = static_cast<float>(std::rand()) / RAND_MAX;
+    return min + normalized * (max - min);
 }
 
 // Funkcja mutacji osobników
@@ -242,12 +256,12 @@ void mutate(std::vector<Polygon>& population, float mutationRate)
         {
             // Dla ka¿dego wierzcho³ka w osobniku
 
-            if (randDouble(0, 1) < mutationRate)
+            if (randFloat(0, 1) < mutationRate)
             {
                 // Wykonaj mutacjê z prawdopodobieñstwem mutationRate
 
-                float newX = vertex.x + randDouble(-1, 1);
-                float newY = vertex.y + randDouble(-1, 1);
+                float newX = vertex.x + randFloat(-1, 1);
+                float newY = vertex.y + randFloat(-1, 1);
 
                 vertex.x = newX;
                 vertex.y = newY;
@@ -259,13 +273,13 @@ void mutate(std::vector<Polygon>& population, float mutationRate)
 void randomPlacement(Polygon& polygon, float minX, float maxX, float minY, float maxY)
 {
     // Resetowanie wierzcho³ków wielok¹ta
-    polygon.vertices.clear();
+    // polygon.vertices.clear();
 
     // Losowe rozmieszczenie wierzcho³ków
     for (size_t i = 0; i < polygon.vertices.size(); ++i)
     {
-        float x = randDouble(minX, maxX);
-        float y = randDouble(minY, maxY);
+        float x = randFloat(minX, maxX);
+        float y = randFloat(minY, maxY);
         polygon.vertices[i] = Point(x, y);
     }
 }
@@ -279,7 +293,7 @@ std::vector<Polygon> geneticAlgorithm(const std::vector<Point>& initialPolygon, 
     for (int i = 0; i < populationSize; ++i)
     {
         Polygon polygon(initialPolygon);
-        randomPlacement(polygon, 0.0f, 4.0f, 0.0f, 4.0f); // Losowe rozmieszczenie wierzcho³ków w zakresie [0, 1]
+        randomPlacement(polygon, 0.0f, 1.0f, 0.0f, 1.0f); // Losowe rozmieszczenie wierzcho³ków w zakresie [0, 1]
         population[i] = polygon;
     }
 
