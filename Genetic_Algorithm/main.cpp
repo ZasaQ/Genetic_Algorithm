@@ -17,9 +17,11 @@ struct Polygon
 {
     std::vector<Point> vertices;
 
-    Polygon() {}
+    Polygon() = default;
     Polygon(const std::vector<Point>& vertices) : vertices(vertices) {}
 };
+
+int OChujChodzi {0};
 
 /*
     template <class ForwardIterator, class T>
@@ -60,7 +62,7 @@ std::vector<Point> computeLineSegmentRectangleIntersections(float p0x, float p0y
     {
         float intersectionX = p0x + t * dx;
         float intersectionY = p0y + t * dy;
-        intersections.push_back(Point(intersectionX, intersectionY));
+        intersections.emplace_back(intersectionX, intersectionY);
     }
 
     return intersections;
@@ -124,7 +126,10 @@ int countIntersections(const Polygon& poly1, const Polygon& poly2)
             float x3 = poly2.vertices[l].x;
             float y3 = poly2.vertices[l].y;
 
-            std::vector<float> intersections = computeLineRectangleIntersections(x0, y0, x1, y1, x2, y2, x3, y3);
+            std::vector<float> intersections = computeLineRectangleIntersections(x0, y0,
+                                                                                 x1, y1,
+                                                                                 x2, y2,
+                                                                                 x3, y3);
             if (!intersections.empty())
             {
                 intersectionCount += intersections.size() / 2;
@@ -153,19 +158,41 @@ int fitnessFunction(const std::vector<Polygon>& population)
     return totalIntersections;
 }
 
+std::vector<Polygon> sortPopulation(const std::vector<Polygon>& population)
+{
+    std::vector<Polygon> sortedPopulation = population;
+    int n = sortedPopulation.size();
+
+    for (int i = 0; i < n - 1; ++i) {
+        for (int j = 0; j < n - i - 1; ++j) {
+            int intersections1 = countIntersections(sortedPopulation[j], sortedPopulation[0]);
+            int intersections2 = countIntersections(sortedPopulation[j + 1], sortedPopulation[0]);
+
+            if (intersections1 > intersections2) {
+                std::swap(sortedPopulation[j], sortedPopulation[j + 1]);
+            }
+        }
+    }
+
+    return sortedPopulation;
+}
+
 // Funkcja selekcji osobników
 std::vector<Polygon> selection(const std::vector<Polygon>& population, int numParents)
 {
     // SprawdŸ poprawnoœæ parametrów
     if (numParents <= 0 || numParents > population.size())
     {
-        throw std::invalid_argument("Nieprawid³owa liczba rodziców.");
+        throw std::invalid_argument("Nieprawidlowa liczba rodzicow.");
     }
 
     // Utwórz kopiê populacji, aby unikn¹æ modyfikacji oryginalnej populacji
     std::vector<Polygon> populationCopy = population;
 
-    // Sortuj populacjê w kolejnoœci rosn¹cej na podstawie liczby nachodz¹cych na siebie maksymalnych wielok¹tów (lambda)
+    sortPopulation(populationCopy);
+
+    /*
+    // Sortuj populacjê w kolejnoœci rosn¹cej na podstawie liczby nachodz¹cych na siebie maksymalnych wielok¹tów
     std::sort(populationCopy.begin(), populationCopy.end(), [&](const Polygon& a, const Polygon& b)
         {
             int aIntersections = countIntersections(a, populationCopy[0]);
@@ -173,9 +200,11 @@ std::vector<Polygon> selection(const std::vector<Polygon>& population, int numPa
             return aIntersections < bIntersections;
         }
     );
+    */
 
     // Wybierz okreœlon¹ liczbê rodziców z posortowanej populacji
     std::vector<Polygon> parents;
+    parents.reserve(numParents);
     for (int i = 0; i < numParents; ++i)
     {
         parents.push_back(populationCopy[i]);
@@ -232,6 +261,7 @@ float randFloat(float min, float max)
     return dis(gen);
 }
 
+/*
 float randomFloat(float min, float max)
 {
     static bool randOnce = true;
@@ -244,6 +274,7 @@ float randomFloat(float min, float max)
     float normalized = static_cast<float>(std::rand()) / RAND_MAX;
     return min + normalized * (max - min);
 }
+*/
 
 // Funkcja mutacji osobników
 void mutate(std::vector<Polygon>& population, float mutationRate) 
@@ -276,11 +307,11 @@ void randomPlacement(Polygon& polygon, float minX, float maxX, float minY, float
     // polygon.vertices.clear();
 
     // Losowe rozmieszczenie wierzcho³ków
-    for (size_t i = 0; i < polygon.vertices.size(); ++i)
+    for (auto & InVertice : polygon.vertices)
     {
         float x = randFloat(minX, maxX);
         float y = randFloat(minY, maxY);
-        polygon.vertices[i] = Point(x, y);
+        InVertice = Point(x, y);
     }
 }
 
@@ -297,9 +328,18 @@ std::vector<Polygon> geneticAlgorithm(const Polygon& initialPolygon, int populat
         population[i] = polygon;
     }
 
+    int bestFitness = std::numeric_limits<int>::max();
+    Polygon bestIndividual;
+
     for (int generation = 0; generation < numGenerations; ++generation)
     {
-        int fitness = fitnessFunction(population);
+        int fitness = fitnessFunction(population); // Obliczanie fitness dla populacji
+
+        if (fitness < bestFitness)
+        {
+            bestFitness = fitness;
+            bestIndividual = population[0]; // Za³ó¿my, ¿e najlepszy osobnik to pierwszy w populacji
+        }
 
         std::vector<Polygon> parents = selection(population, populationSize / 2);
         std::vector<Polygon> offspring = crossover(parents);
@@ -308,7 +348,10 @@ std::vector<Polygon> geneticAlgorithm(const Polygon& initialPolygon, int populat
         population = offspring;
     }
 
+    std::cout << "Fitness najlepszego osobnika: " << bestFitness << std::endl;
+
     return population;
+
 }
 
 std::ostream& operator << (std::ostream& out, std::vector<Polygon>& Polygon)
@@ -336,10 +379,12 @@ int main() {
 
     int populationSize = 100;
     int numGenerations = 50;
-    float mutationRate = 0.1f;
+    float mutationRate = 0.05f;
 
     // Wywo³anie algorytmu genetycznego
     std::vector<Polygon> result = geneticAlgorithm(initialPolygon, populationSize, numGenerations, mutationRate);
+
+    std::cout << "\n";
 
     std::cout << result;
 
