@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <random>
 #include <numeric>
-#include <ctime>
 
 
 struct Point 
@@ -20,53 +19,6 @@ struct Polygon
     Polygon() = default;
     Polygon(const std::vector<Point>& vertices) : vertices(vertices) {}
 };
-
-int OChujChodzi {0};
-
-/*
-    template <class ForwardIterator, class T>
-    void iota(ForwardIterator first, ForwardIterator last, T val)
-    {
-        while (first != last) {
-            *first = val;
-            ++first;
-            ++val;
-        }
-    }
-*/
-
-std::vector<Point> computeLineSegmentRectangleIntersections(float p0x, float p0y, float p1x, float p1y, float r0x, float r0y, float r1x, float r1y)
-{
-    std::vector<Point> intersections;
-
-    // Obliczanie równañ linii
-    float dx = p1x - p0x;
-    float dy = p1y - p0y;
-    float drx = r1x - r0x;
-    float dry = r1y - r0y;
-
-    float determinant = dx * dry - drx * dy;
-
-    // Sprawdzanie czy odcinek i prostok¹t s¹ równoleg³e
-    if (determinant == 0)
-    {
-        return intersections; // Brak przeciêæ
-    }
-
-    // Obliczanie parametrów przeciêcia
-    float t = ((r0x - p0x) * dry - (r0y - p0y) * drx) / determinant;
-    float u = ((r0x - p0x) * dy - (r0y - p0y) * dx) / determinant;
-
-    // Sprawdzanie czy przeciêcie mieœci siê na odcinku i w prostok¹cie
-    if (t >= 0 && t <= 1 && u >= 0 && u <= 1) 
-    {
-        float intersectionX = p0x + t * dx;
-        float intersectionY = p0y + t * dy;
-        intersections.emplace_back(intersectionX, intersectionY);
-    }
-
-    return intersections;
-}
 
 std::vector<float> computeLineRectangleIntersections(float p0x, float p0y, float p1x, float p1y, float r0x, float r0y, float r1x, float r1y)
 {
@@ -95,6 +47,7 @@ std::vector<float> computeLineRectangleIntersections(float p0x, float p0y, float
     {
         float intersectionX = p0x + t * dx;
         float intersectionY = p0y + t * dy;
+
         intersections.push_back(intersectionX);
         intersections.push_back(intersectionY);
     }
@@ -183,24 +136,13 @@ std::vector<Polygon> selection(const std::vector<Polygon>& population, int numPa
     // SprawdŸ poprawnoœæ parametrów
     if (numParents <= 0 || numParents > population.size())
     {
-        throw std::invalid_argument("Nieprawidlowa liczba rodzicow.");
+        numParents = population.size();
     }
 
     // Utwórz kopiê populacji, aby unikn¹æ modyfikacji oryginalnej populacji
     std::vector<Polygon> populationCopy = population;
 
     sortPopulation(populationCopy);
-
-    /*
-    // Sortuj populacjê w kolejnoœci rosn¹cej na podstawie liczby nachodz¹cych na siebie maksymalnych wielok¹tów
-    std::sort(populationCopy.begin(), populationCopy.end(), [&](const Polygon& a, const Polygon& b)
-        {
-            int aIntersections = countIntersections(a, populationCopy[0]);
-            int bIntersections = countIntersections(b, populationCopy[0]);
-            return aIntersections < bIntersections;
-        }
-    );
-    */
 
     // Wybierz okreœlon¹ liczbê rodziców z posortowanej populacji
     std::vector<Polygon> parents;
@@ -233,7 +175,7 @@ std::vector<Polygon> crossover(const std::vector<Polygon>& parents)
         const Polygon& parent1 = parents[i];
         const Polygon& parent2 = parents[i + 1];
 
-        Polygon child(parent1);
+        Polygon child;
 
         // Skopiowanie czêœci genotypu z rodzica 1 przed punktem krzy¿owania
         for (size_t j = 0; j < crossoverPoint; ++j)
@@ -260,21 +202,6 @@ float randFloat(float min, float max)
     std::uniform_real_distribution<float> dis(min, max);
     return dis(gen);
 }
-
-/*
-float randomFloat(float min, float max)
-{
-    static bool randOnce = true;
-
-    if (randOnce)
-    {
-        std::srand(static_cast<unsigned int>(std::time(NULL)));
-        randOnce = false;
-    }
-    float normalized = static_cast<float>(std::rand()) / RAND_MAX;
-    return min + normalized * (max - min);
-}
-*/
 
 // Funkcja mutacji osobników
 void mutate(std::vector<Polygon>& population, float mutationRate) 
@@ -303,9 +230,6 @@ void mutate(std::vector<Polygon>& population, float mutationRate)
 
 void randomPlacement(Polygon& polygon, float minX, float maxX, float minY, float maxY)
 {
-    // Resetowanie wierzcho³ków wielok¹ta
-    // polygon.vertices.clear();
-
     // Losowe rozmieszczenie wierzcho³ków
     for (auto & InVertice : polygon.vertices)
     {
@@ -338,7 +262,7 @@ std::vector<Polygon> geneticAlgorithm(const Polygon& initialPolygon, int populat
         if (fitness < bestFitness)
         {
             bestFitness = fitness;
-            bestIndividual = population[0]; // Za³ó¿my, ¿e najlepszy osobnik to pierwszy w populacji
+            bestIndividual = population[0]; // Zak³adamy, ¿e najlepszy osobnik to pierwszy w populacji
         }
 
         std::vector<Polygon> parents = selection(population, populationSize / 2);
@@ -348,7 +272,7 @@ std::vector<Polygon> geneticAlgorithm(const Polygon& initialPolygon, int populat
         population = offspring;
     }
 
-    std::cout << "Fitness najlepszego osobnika: " << bestFitness << std::endl;
+    //std::cout << "Fitness najlepszego osobnika: " << bestFitness << std::endl;
 
     return population;
 
@@ -377,14 +301,12 @@ int main() {
 
     Polygon initialPolygon = initialPolygonVertices;
 
-    int populationSize = 100;
-    int numGenerations = 50;
-    float mutationRate = 0.05f;
+    int populationSize = 300;
+    int numGenerations = 3;
+    float mutationRate = 0.1f;
 
     // Wywo³anie algorytmu genetycznego
     std::vector<Polygon> result = geneticAlgorithm(initialPolygon, populationSize, numGenerations, mutationRate);
-
-    std::cout << "\n";
 
     std::cout << result;
 
