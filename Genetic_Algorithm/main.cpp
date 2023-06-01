@@ -116,12 +116,15 @@ std::vector<Polygon> sortPopulation(const std::vector<Polygon>& population)
     std::vector<Polygon> sortedPopulation = population;
     int n = sortedPopulation.size();
 
-    for (int i = 0; i < n - 1; ++i) {
-        for (int j = 0; j < n - i - 1; ++j) {
+    for (int i = 0; i < n - 1; ++i)
+    {
+        for (int j = 0; j < n - i - 1; ++j)
+        {
             int intersections1 = countIntersections(sortedPopulation[j], sortedPopulation[0]);
             int intersections2 = countIntersections(sortedPopulation[j + 1], sortedPopulation[0]);
 
-            if (intersections1 > intersections2) {
+            if (intersections1 > intersections2)
+            {
                 std::swap(sortedPopulation[j], sortedPopulation[j + 1]);
             }
         }
@@ -272,15 +275,29 @@ std::vector<Polygon> geneticAlgorithm(const Polygon& initialPolygon, int populat
         population = offspring;
     }
 
-    //std::cout << "Fitness najlepszego osobnika: " << bestFitness << std::endl;
-
     return population;
-
 }
 
 std::ostream& operator << (std::ostream& out, std::vector<Polygon>& Polygon)
 {
-    return out << Polygon.size();
+    int i = 0;
+
+    out << "Num of Polygons: " << Polygon.size() << "\n";
+
+    for(auto& InPolygon : Polygon)
+    {
+        out << "Polygon (" << i << "):\n";
+
+        for(auto& InVertices : InPolygon.vertices)
+        {
+            out << "x = " << InVertices.x << ",\t y = " << InVertices.y << "\n";
+        }
+        i++;
+
+        out << "\n";
+    }
+
+    return out;
 }
 
 int main() {
@@ -301,8 +318,8 @@ int main() {
 
     Polygon initialPolygon = initialPolygonVertices;
 
-    int populationSize = 300;
-    int numGenerations = 3;
+    int populationSize = 500;
+    int numGenerations = 5;
     float mutationRate = 0.1f;
 
     // Wywo³anie algorytmu genetycznego
