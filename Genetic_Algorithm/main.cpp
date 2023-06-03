@@ -134,7 +134,7 @@ std::vector<Polygon> selection(const std::vector<Polygon>& population, int numPa
     // SprawdŸ poprawnoœæ parametrów
     if (numParents <= 0 || numParents > population.size())
     {
-        numParents = population.size();
+        numParents = population.size() / 2;
     }
 
     // Tworzymy kopie populacji w celu unikniêcia modyfikacji populacji w³aœciwej
