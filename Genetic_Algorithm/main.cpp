@@ -20,6 +20,7 @@ struct Polygon
     Polygon(const std::vector<Point>& vertices) : vertices(vertices) {}
 };
 
+// Funkcja odpowiadaj¹ca za obliczanie przeciêæ dwóch odcinków
 std::vector<float> computeLineRectangleIntersections(float p0x, float p0y, float p1x, float p1y, float r0x, float r0y, float r1x, float r1y)
 {
     std::vector<float> intersections;
@@ -137,12 +138,10 @@ std::vector<Polygon> selection(const std::vector<Polygon>& population, int numPa
         numParents = population.size() / 2;
     }
 
-    // Tworzymy kopie populacji w celu unikniêcia modyfikacji populacji w³aœciwej
     std::vector<Polygon> populationCopy = population;
 
     sortPopulation(populationCopy);
 
-    // Wybieramy okreœlon¹ liczbê rodziców z posortowanej populacji
     std::vector<Polygon> parents;
     parents.reserve(numParents);
 
@@ -159,16 +158,13 @@ std::vector<Polygon> crossover(const std::vector<Polygon>& parents)
 {
     std::vector<Polygon> offspring;
 
-    // Sprawdzamy czy liczba rodziców jest wystarczaj¹ca
     if (parents.size() < 2)
     {
-        return offspring; // Jeœli nie to funkcja zwróci nam pust¹ populacjê potomstwa
+        return offspring;
     }
 
-    // Wybór punktu krzy¿owania
     size_t crossoverPoint = rand() % parents[0].vertices.size();
 
-    // Krzy¿owanie rodziców
     for (size_t i = 0; i < parents.size() - 1; i += 2)
     {
         const Polygon& parent1 = parents[i];
@@ -222,6 +218,7 @@ void mutate(std::vector<Polygon>& population, float mutationRate)
     }
 }
 
+// Funkcja losowo rozmieszczaj¹ca wierzcho³ki wielok¹ta
 void randomPlacement(Polygon& polygon, float minX, float maxX, float minY, float maxY)
 {
     for (auto& InVertex : polygon.vertices)
@@ -237,11 +234,10 @@ std::vector<Polygon> geneticAlgorithm(const Polygon& initialPolygon, int populat
 {
     std::vector<Polygon> population(populationSize);
 
-    // Inicjalizacja populacji pocz¹tkowej
     for (int i = 0; i < populationSize; ++i)
     {
         Polygon polygon = initialPolygon;
-        randomPlacement(polygon, 0.0f, 1.0f, 0.0f, 1.0f); // Losowe rozmieszczenie wierzcho³ków w zakresie [0, 1]
+        randomPlacement(polygon, 0.0f, 4.0f, 0.0f, 4.0f); // Losowe rozmieszczenie wierzcho³ków
         population[i] = polygon;
     }
 
@@ -308,8 +304,8 @@ int main() {
 
     Polygon initialPolygon = initialPolygonVertices;
 
-    int populationSize = 1000;
-    int numGenerations = 5;
+    int populationSize = 100;
+    int numGenerations = 30;
     float mutationRate = 0.1f;
 
     std::vector<Polygon> result = geneticAlgorithm(initialPolygon, populationSize, numGenerations, mutationRate);
