@@ -19,6 +19,13 @@ struct Polygon
     Polygon(const vector<Point>& vertices) : vertices(vertices) {}
 };
 
+float randFloat(float min, float max)
+{
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<float> dis(min, max);
+    return dis(gen);
+}
 
 // Funkcja odpowiadajï¿œca za obliczanie przeciï¿œï¿œ dwï¿œch odcinkï¿œw
 std::vector<float> computeLineRectangleIntersections(float p0x, float p0y, float p1x, float p1y, float r0x, float r0y, float r1x, float r1y)
@@ -191,14 +198,6 @@ std::vector<Polygon> crossover(const std::vector<Polygon>& parents)
     return offspring;
 }
 
-float randFloat(float min, float max)
-{
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_real_distribution<float> dis(min, max);
-    return dis(gen);
-}
-
 // Funkcja mutacji osobnikï¿œw
 void mutate(std::vector<Polygon>& population, float mutationRate) 
 {
@@ -217,22 +216,6 @@ void mutate(std::vector<Polygon>& population, float mutationRate)
             }
         }
     }
-}
-
-// Funkcja losowo rozmieszczajï¿œca wierzchoï¿œki wielokï¿œta
-void randomPlacement(Polygon& polygon, float minX, float maxX, float minY, float maxY)
-{
-    for (auto& InVertex : polygon.vertices)
-    {
-        float x = randFloat(minX, maxX);
-        float y = randFloat(minY, maxY);
-        InVertex = Point(x, y);
-    }
-}
-
-
-void evaluatePolygons(vector<Polygon> polygons, int count) {
-    
 }
 
 int main(int argc, char **argv) {
