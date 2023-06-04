@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <pvm3.h>
-#include <vector.h>
+#include "vector.h"
 
 #define SLAVE_COUNT 4
 #define MAX_POLYGONS 100
