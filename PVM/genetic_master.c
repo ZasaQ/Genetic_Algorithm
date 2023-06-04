@@ -1,10 +1,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <pvm3.h>
-#include "vector.h"
+#include <conio.h>
 
-#define SLAVE_COUNT 4
+#define SLAVE_COUNT 10
 #define MAX_POLYGONS 100
+#define GENERATIONS_NUM 3
+#define MUTATION_RATE 0.1
 
 struct Point 
 {
@@ -21,26 +23,37 @@ struct Polygon
     Polygon(const vector<Point>& vertices) : vertices(vertices) {}
 };
 
-void initializePolygons(vector<Polygon> polygons, int count) {
-
+// Funkcja losowo rozmieszczajï¿œca wierzchoï¿œki wielokï¿œta
+void randomPlacement(Polygon& polygon, float minX, float maxX, float minY, float maxY)
+{
+    for (auto& InVertex : polygon.vertices)
+    {
+        float x = randFloat(minX, maxX);
+        float y = randFloat(minY, maxY);
+        InVertex = Point(x, y);
+    }
 }
 
-void evaluatePolygons(vector<Polygon> polygons, int count) {
-
+float randFloat(float min, float max)
+{
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<float> dis(min, max);
+    return dis(gen);
 }
 
-void crossoverPolygons(Polygon parent1, Polygon parent2, Polygon* child) {
-
+void initializePolygons(vector<Polygon> polygons) {
+    
 }
 
-void mutatePolygon(Polygon* polygon) {
-
+void evaluatePolygons(vector<Polygon> polygons) {
+    
 }
 
 int main(int argc, char **argv) {
     int tid, parent;
     int count = MAX_POLYGONS;
-    ConvexPolygon polygons[MAX_POLYGONS];
+    vector<Polygon> polygons[MAX_POLYGONS];
 
     tid = pvm_mytid();
     parent = pvm_parent();
