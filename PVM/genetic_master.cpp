@@ -1,12 +1,13 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <pvm3.h>
 #include <vector>
 #include <numeric>
 #include <random>
+#include <iostream>
+#include <pvm3.h>
 
-#define SLAVE_COUNT 10
-#define MAX_POLYGONS 100
+#define SLAVE_NUM 10
+#define POPULATION_SIZE 100
 #define GENERATIONS_NUM 3
 #define MUTATION_RATE 0.1f
 
@@ -33,7 +34,6 @@ bool isPolygonConvex(const Polygon& polygon) {
         return false;
     }
 
-    bool isConvex = true;
     for (int i = 0; i < vertexCount; i++) {
         const Point& p1 = vertices[i];
         const Point& p2 = vertices[(i + 1) % vertexCount];
@@ -75,27 +75,67 @@ int verticesAmountGeneratedPerPolygon(int min, int max)
 
 void initializePolygons(std::vector<Polygon>& population)
 {
-    for (auto& inPolygon : population)
+    for (int i = 0; i < POPULATION_SIZE; i++)
     {
-        int NumOfGeneratedVertices = verticesAmountGeneratedPerPolygon(3, 12);
-
-        for (int i = 0; i < NumOfGeneratedVertices; i++)
+        Polygon inPolygon;
+        do
         {
-            float x = randFloat(0.0f, 10.0f);
-            float y = randFloat(0.0f, 10.0f);
-            inPolygon.vertices.push_back(Point(x,y));
-        }
+            inPolygon.vertices.clear();
+            int NumOfGeneratedVertices = verticesAmountGeneratedPerPolygon(3, 12);
 
+            for (int j = 0; j < NumOfGeneratedVertices; j++)
+            {
+                float x = randFloat(0.0f, 10.0f);
+                float y = randFloat(0.0f, 10.0f);
+                inPolygon.vertices.push_back(Point(x,y));
+            }
+        } while (!isPolygonConvex(inPolygon));
 
+        population.push_back(inPolygon);
     }
 }
 
-void evaluatePolygons(std::vector<Polygon>& polygons)
+std::ostream& operator << (std::ostream& out, std::vector<Polygon>& Polygon)
 {
-    
+    int i = 0;
+
+    out << "Num of Polygons: " << Polygon.size() << "\n";
+
+    for (auto& InPolygon : Polygon)
+    {
+        out << "Polygon (" << i << "):\n";
+
+        for (auto& InVertex : InPolygon.vertices)
+        {
+            out << "x = " << InVertex.x << ",\t y = " << InVertex.y << "\n";
+        }
+        i++;
+
+        out << "\n";
+    }
+
+    return out;
 }
 
-int main(int argc, char **argv)
+int main()
 {
+    std::vector<Point> initialPolygonVertices = {
+            {-5.0f, 5.0f},
+            {0.0f, 10.0f},
+            {5.0f, 5.0f},
+            {7.0f, 2.0f},
+            {10.0f, 0.0f},
+            {7.0f, -2.0f},
+            {5.0f, -5.0f},
+            {0.0f, -10.0f},
+            {-5.0f, -5.0f},
+            {-7.0f, -2.0f},
+            {-10.0f, 0.0f},
+            {-7.0f, 2.0f}
+    };
+    Polygon initialPolygon = initialPolygonVertices;
+    std::vector<Polygon> population;
+    initializePolygons(population);
 
+    return 0;
 }

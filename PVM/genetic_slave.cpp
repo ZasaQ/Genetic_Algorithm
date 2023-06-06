@@ -1,14 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <pvm3.h>
 #include <vector>
 #include <numeric>
 #include <random>
-
-#define SLAVE_COUNT 10
-#define MAX_POLYGONS 100
-#define GENERATIONS_NUM 3
-#define MUTATION_RATE 0.1f
+#include <iostream>
+#include <pvm3.h>
 
 struct Point 
 {
@@ -33,7 +29,7 @@ float randFloat(float min, float max)
     return dis(gen);
 }
 
-// Funkcja odpowiadajï¿œca za obliczanie przeciï¿œï¿œ dwï¿œch odcinkï¿œw
+// Funkcja odpowiadajaca za liczenie ilosci przeciec miedzy odcinkami
 std::vector<float> computeLineRectangleIntersections(float p0x, float p0y, float p1x, float p1y, float r0x, float r0y, float r1x, float r1y)
 {
     std::vector<float> intersections;
@@ -66,12 +62,11 @@ std::vector<float> computeLineRectangleIntersections(float p0x, float p0y, float
 }
 
 
-// Funkcja zwaracjï¿œca liczbï¿œ przeciï¿œï¿œ miï¿œdzy wielokï¿œtami, zastosowany zostaï¿œ tutaj algorytm SAT(Separating Axis Theorem)
+// Funkcja zwaracajaca liczbe przeciec miedzy wielokatami, zastosowany zostaï¿œ tutaj algorytm SAT(Separating Axis Theorem)
 int countIntersections(const Polygon& poly1, const Polygon& poly2)
 {
     int intersectionCount = 0;
 
-    // Sprawdzanie przeciï¿œï¿œ dla kaï¿œdej krawï¿œdzi obu wielokï¿œtï¿œw
     for (size_t i = 0; i < poly1.vertices.size(); ++i)
     {
         size_t j = (i + 1) % poly1.vertices.size();
@@ -104,12 +99,11 @@ int countIntersections(const Polygon& poly1, const Polygon& poly2)
     return intersectionCount;
 }
 
-// Funkcja obliczajï¿œca ocenï¿œ dostosowania (fitness) osobnika, im mniejsza liczba przeciï¿œï¿œ, tym lepsze dostosowanie
+// Funkcja obliczajaca ocene dostosowania (fitness) osobnika, im mniejsza liczba przeciec, tym lepsze dostosowanie
 int fitnessFunction(const std::vector<Polygon>& population)
 {
     int totalIntersections = 0;
 
-    // Obliczanie liczby przeciï¿œï¿œ dla kaï¿œdej pary osobnikï¿œw w populacji
     for (size_t i = 0; i < population.size(); ++i)
     {
         for (size_t j = i + 1; j < population.size(); ++j)
@@ -143,10 +137,9 @@ std::vector<Polygon> sortPopulation(const std::vector<Polygon>& population)
     return sortedPopulation;
 }
 
-// Funkcja selekcji osobnikï¿œw
+// Funkcja selekcji osobnikow
 std::vector<Polygon> selection(const std::vector<Polygon>& population, int numParents)
 {
-    // Sprawdï¿œ poprawnoï¿œï¿œ parametrï¿œw
     if (numParents <= 0 || numParents > population.size())
     {
         numParents = population.size() / 2;
@@ -167,7 +160,7 @@ std::vector<Polygon> selection(const std::vector<Polygon>& population, int numPa
     return parents;
 }
 
-// Funkcja krzyï¿œowania osobnikï¿œw
+// Funkcja krzyzowania osobnikow
 std::vector<Polygon> crossover(const std::vector<Polygon>& parents)
 {
     std::vector<Polygon> offspring;
@@ -186,13 +179,11 @@ std::vector<Polygon> crossover(const std::vector<Polygon>& parents)
 
         Polygon child;
 
-        // Kopiujemy czï¿œï¿œ genotypu z rodzica 1 przed punktem krzyï¿œowania
         for (size_t j = 0; j < crossoverPoint; ++j)
         {
             child.vertices.push_back(parent1.vertices[j]);
         }
 
-        // Kopiujemy czï¿œci genotypu z rodzica 2 po punkcie krzyï¿œowania
         for (size_t j = crossoverPoint; j < parent2.vertices.size(); ++j)
         {
             child.vertices.push_back(parent2.vertices[j]);
@@ -204,8 +195,8 @@ std::vector<Polygon> crossover(const std::vector<Polygon>& parents)
     return offspring;
 }
 
-// Funkcja mutacji osobnikï¿œw
-void mutate(std::vector<Polygon>& population, float mutationRate) 
+// Funkcja mutacji osobnikow
+void mutate(std::vector<Polygon>& population, float mutationRate)
 {
     for (auto& polygon : population)
     {
@@ -213,7 +204,6 @@ void mutate(std::vector<Polygon>& population, float mutationRate)
         {
             if (randFloat(0, 1) < mutationRate)
             {
-                // Wykonujemy mutacjï¿œ z prawdopodobieï¿œstwem mutationRate
                 float newX = vertex.x + randFloat(-1, 1);
                 float newY = vertex.y + randFloat(-1, 1);
 
@@ -224,7 +214,34 @@ void mutate(std::vector<Polygon>& population, float mutationRate)
     }
 }
 
-int main(int argc, char **argv) {
+std::vector<Polygon> evaluatePolygons(std::vector<Polygon>& population, int numGeneration, float mutationRate)
+{
+    //int bestFitness = std::numeric_limits<int>::max();
+    Polygon bestIndividual;
+
+    for (int generation = 0; generation < numGeneration; ++generation)
+    {
+        /*
+        int fitness = fitnessFunction(population);
+
+        if (fitness < bestFitness)
+        {
+            bestFitness = fitness;
+            bestIndividual = population[0]; // Zakładamy, że najlepszy osobnik to pierwszy w populacji
+        }
+        */
+
+        std::vector<Polygon> parents = selection(population, population.size() / 2);
+        std::vector<Polygon> offspring = crossover(parents);
+
+        mutate(offspring, mutationRate);
+        population = offspring;
+    }
+
+    return population;
+}
+
+int main() {
     int tid, parent;
     int count, start, end;
     std::vector<Polygon> polygons[MAX_POLYGONS];
@@ -232,14 +249,12 @@ int main(int argc, char **argv) {
     tid = pvm_mytid();
     parent = pvm_parent();
 
-    // Odbiór danych od mastera
     pvm_recv(parent, 1);
     pvm_upkint(&count, 1, 1);
     pvm_upkint(&start, 1, 1);
     pvm_upkint(&end, 1, 1);
     pvm_upkbyte((char*)polygons, sizeof(Polygon) * count, 1);
 
-    // Wysyłanie ocenionych danych do mastera
     pvm_initsend(PvmDataDefault);
     pvm_pkbyte((char*)polygons, sizeof(Polygon) * count, 1);
     pvm_send(parent, 1);
