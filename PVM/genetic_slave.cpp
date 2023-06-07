@@ -240,7 +240,7 @@ std::vector<Polygon> evaluatePolygons(std::vector<Polygon>& population, int numG
     return population;
 }
 
-void receivePopulation(std::vector<Polygon>& population) {
+void receivePopulation(std::vector<Polygon>& population, int& inMutationRate, int& inGenerationNum) {
     int tid = pvm_mytid();
     int dataTag = 1;
 
@@ -259,6 +259,25 @@ void receivePopulation(std::vector<Polygon>& population) {
     pvm_upkint(&generationNum, 1, 1);
 
     population.insert(population.begin(), chunk.begin(), chunk.end());
+
+    inMutationRate = mutationRate;
+    inGenerationNum = generationNum;
+}
+
+void sendEvaluationResult(const std::vector<Polygon>& results)
+{
+    int tid = pvm_mytid(); // Pobranie TID zadania slave
+    int dataTag = 2; // Tag danych
+
+    // Wysłanie wyników ewaluacji
+    pvm_initsend(PvmDataDefault);
+    pvm_pkint(&(results.size()), 1, 1); // Wysłanie rozmiaru wektora
+
+    for (const auto& polygon : results) {
+        pvm_pkbyte(polygon.vertices.data(), polygon.vertices.size() * sizeof(Point), 1);
+    }
+
+    pvm_send(tid, dataTag);
 }
 
 int main() {
@@ -266,8 +285,16 @@ int main() {
     int count, start, end;
 
     std::vector<Polygon> population;
+    std::vector<Polygon> evaluationResult;
 
-    receivePopulation(population);
+    int mutationRate = 0;
+    int generationNum = 0;
+
+    receivePopulation(population, mutationRate, generationNum);
+    evaluationResult = evaluatePolygons(population, mutationRate, generationNum);
+
+    sendEvaluationResult(evaluationResult);
+
 
     pvm_exit();
     return 0;

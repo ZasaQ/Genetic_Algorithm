@@ -107,6 +107,7 @@ void distributePopulation(std::vector<Polygon>& population)
     int populationChunkSize = populationSize / SLAVE_NUM;
 
     std::vector<Polygon> populationChunk(populationChunkSize);
+    int dataTag = 1;
 
     for (int i = 0; i < SLAVE_NUM; i++)
     {
@@ -116,7 +117,6 @@ void distributePopulation(std::vector<Polygon>& population)
         std::copy(population.begin() + startIndex, population.begin() + endIndex + 1, populationChunk.begin());
 
         int tid = ptid + (i + 1);
-        int dataTag = 1;
 
         pvm_initsend(PvmDataDefault);
         pvm_pkint(&populationChunkSize, 1, 1);
@@ -128,6 +128,36 @@ void distributePopulation(std::vector<Polygon>& population)
     }
 }
 
+void receiveEvaluationResults(std::vector<std::vector<Polygon>>& results)
+{
+    int ptid = pvm_mytid();
+    int dataTag = 2;
+
+    for (int i = 0; i < SLAVE_NUM; i++)
+    {
+        int tid = ptid + (i + 1);
+        int bufSize = 0;
+
+        pvm_probe(tid, dataTag);
+        pvm_upkint(&bufSize, 1, 1);
+
+        std::vector<Polygon> slaveResults;
+        slaveResults.reserve(bufSize);
+
+        for (int j = 0; j < bufSize; j++) {
+            Polygon polygon;
+            int verticesSize = 0;
+
+            pvm_upkint(&verticesSize, 1, 1);
+
+            pvm_upkbyte(polygon.vertices.data(), verticesSize * sizeof(Point), 1);
+
+            slaveResults.push_back(polygon);
+        }
+
+        results.push_back(slaveResults);
+    }
+}
 
 std::ostream& operator << (std::ostream& out, std::vector<Polygon>& Polygon)
 {
@@ -169,9 +199,12 @@ int main()
     };
     Polygon initialPolygon = initialPolygonVertices;
     std::vector<Polygon> population;
-    initializePolygons(population);
+    std::vector<std::vector<Polygon>> result;
 
+    initializePolygons(population);
     distributePopulation(population);
+
+    receiveEvaluationResults(result);
 
     pvm_exit();
     return 0;
