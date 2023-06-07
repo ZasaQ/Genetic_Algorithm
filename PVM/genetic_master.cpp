@@ -95,6 +95,40 @@ void initializePolygons(std::vector<Polygon>& population)
     }
 }
 
+void distributePopulation(std::vector<Polygon>& population)
+{
+    int ptid = pvm_mytid();
+    //pvm_init(nullptr, nullptr, 0);
+
+    int mutationRate = MUTATION_RATE;
+    int generationNum = GENERATIONS_NUM;
+
+    int populationSize = population.size();
+    int populationChunkSize = populationSize / SLAVE_NUM;
+
+    std::vector<Polygon> populationChunk(populationChunkSize);
+
+    for (int i = 0; i < SLAVE_NUM; i++)
+    {
+        int startIndex = i * populationChunkSize;
+        int endIndex = (i + 1) * populationChunkSize - 1;
+
+        std::copy(population.begin() + startIndex, population.begin() + endIndex + 1, populationChunk.begin());
+
+        int tid = ptid + (i + 1);
+        int dataTag = 1;
+
+        pvm_initsend(PvmDataDefault);
+        pvm_pkint(&populationChunkSize, 1, 1);
+        pvm_pkbyte(populationChunk.data(), populationChunkSize * sizeof(Polygon), 1);
+        pvm_pkint(&mutationRate, 1, 1);
+        pvm_pkint(&generationNum, 1, 1);
+
+        pvm_send(tid, dataTag);
+    }
+}
+
+
 std::ostream& operator << (std::ostream& out, std::vector<Polygon>& Polygon)
 {
     int i = 0;
@@ -137,5 +171,8 @@ int main()
     std::vector<Polygon> population;
     initializePolygons(population);
 
+    distributePopulation(population);
+
+    pvm_exit();
     return 0;
 }

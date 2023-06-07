@@ -61,8 +61,7 @@ std::vector<float> computeLineRectangleIntersections(float p0x, float p0y, float
     return intersections;
 }
 
-
-// Funkcja zwaracajaca liczbe przeciec miedzy wielokatami, zastosowany zostaï¿œ tutaj algorytm SAT(Separating Axis Theorem)
+// Funkcja zwaracajaca liczbe przeciec miedzy wielokatami, zastosowany zostal tutaj algorytm SAT (Separating Axis Theorem)
 int countIntersections(const Polygon& poly1, const Polygon& poly2)
 {
     int intersectionCount = 0;
@@ -241,23 +240,34 @@ std::vector<Polygon> evaluatePolygons(std::vector<Polygon>& population, int numG
     return population;
 }
 
+void receivePopulation(std::vector<Polygon>& population) {
+    int tid = pvm_mytid();
+    int dataTag = 1;
+
+    pvm_recv(tid, dataTag);
+
+    int chunkSize;
+    int mutationRate;
+    int generationNum;
+
+    pvm_upkint(&chunkSize, 1, 1);
+
+    std::vector<Polygon> chunk(chunkSize);
+
+    pvm_upkbyte(chunk.data(), chunkSize * sizeof(Polygon), 1);
+    pvm_upkint(&mutationRate, 1, 1);
+    pvm_upkint(&generationNum, 1, 1);
+
+    population.insert(population.begin(), chunk.begin(), chunk.end());
+}
+
 int main() {
     int tid, parent;
     int count, start, end;
-    std::vector<Polygon> polygons[MAX_POLYGONS];
 
-    tid = pvm_mytid();
-    parent = pvm_parent();
+    std::vector<Polygon> population;
 
-    pvm_recv(parent, 1);
-    pvm_upkint(&count, 1, 1);
-    pvm_upkint(&start, 1, 1);
-    pvm_upkint(&end, 1, 1);
-    pvm_upkbyte((char*)polygons, sizeof(Polygon) * count, 1);
-
-    pvm_initsend(PvmDataDefault);
-    pvm_pkbyte((char*)polygons, sizeof(Polygon) * count, 1);
-    pvm_send(parent, 1);
+    receivePopulation(population);
 
     pvm_exit();
     return 0;
