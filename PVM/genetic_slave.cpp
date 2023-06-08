@@ -29,7 +29,6 @@ float randFloat(float min, float max)
     return dis(gen);
 }
 
-// Funkcja odpowiadajaca za liczenie ilosci przeciec miedzy odcinkami
 std::vector<float> computeLineRectangleIntersections(float p0x, float p0y, float p1x, float p1y, float r0x, float r0y, float r1x, float r1y)
 {
     std::vector<float> intersections;
@@ -98,22 +97,6 @@ int countIntersections(const Polygon& poly1, const Polygon& poly2)
     return intersectionCount;
 }
 
-// Funkcja obliczajaca ocene dostosowania (fitness) osobnika, im mniejsza liczba przeciec, tym lepsze dostosowanie
-int fitnessFunction(const std::vector<Polygon>& population)
-{
-    int totalIntersections = 0;
-
-    for (size_t i = 0; i < population.size(); ++i)
-    {
-        for (size_t j = i + 1; j < population.size(); ++j)
-        {
-            totalIntersections += countIntersections(population[i], population[j]);
-        }
-    }
-
-    return totalIntersections;
-}
-
 std::vector<Polygon> sortPopulation(const std::vector<Polygon>& population)
 {
     std::vector<Polygon> sortedPopulation = population;
@@ -136,7 +119,6 @@ std::vector<Polygon> sortPopulation(const std::vector<Polygon>& population)
     return sortedPopulation;
 }
 
-// Funkcja selekcji osobnikow
 std::vector<Polygon> selection(const std::vector<Polygon>& population, int numParents)
 {
     if (numParents <= 0 || numParents > population.size())
@@ -159,7 +141,6 @@ std::vector<Polygon> selection(const std::vector<Polygon>& population, int numPa
     return parents;
 }
 
-// Funkcja krzyzowania osobnikow
 std::vector<Polygon> crossover(const std::vector<Polygon>& parents)
 {
     std::vector<Polygon> offspring;
@@ -194,7 +175,6 @@ std::vector<Polygon> crossover(const std::vector<Polygon>& parents)
     return offspring;
 }
 
-// Funkcja mutacji osobnikow
 void mutate(std::vector<Polygon>& population, float mutationRate)
 {
     for (auto& polygon : population)
@@ -215,21 +195,8 @@ void mutate(std::vector<Polygon>& population, float mutationRate)
 
 std::vector<Polygon> evaluatePolygons(std::vector<Polygon>& population, int numGeneration, float mutationRate)
 {
-    //int bestFitness = std::numeric_limits<int>::max();
-    Polygon bestIndividual;
-
     for (int generation = 0; generation < numGeneration; ++generation)
     {
-        /*
-        int fitness = fitnessFunction(population);
-
-        if (fitness < bestFitness)
-        {
-            bestFitness = fitness;
-            bestIndividual = population[0]; // Zakładamy, że najlepszy osobnik to pierwszy w populacji
-        }
-        */
-
         std::vector<Polygon> parents = selection(population, population.size() / 2);
         std::vector<Polygon> offspring = crossover(parents);
 
@@ -266,12 +233,11 @@ void receivePopulation(std::vector<Polygon>& population, int& inMutationRate, in
 
 void sendEvaluationResult(const std::vector<Polygon>& results)
 {
-    int tid = pvm_mytid(); // Pobranie TID zadania slave
-    int dataTag = 2; // Tag danych
+    int tid = pvm_mytid();
+    int dataTag = 2;
 
-    // Wysłanie wyników ewaluacji
     pvm_initsend(PvmDataDefault);
-    pvm_pkint(&(results.size()), 1, 1); // Wysłanie rozmiaru wektora
+    pvm_pkint(results.size(), 1, 1);
 
     for (const auto& polygon : results) {
         pvm_pkbyte(polygon.vertices.data(), polygon.vertices.size() * sizeof(Point), 1);
@@ -281,9 +247,6 @@ void sendEvaluationResult(const std::vector<Polygon>& results)
 }
 
 int main() {
-    int tid, parent;
-    int count, start, end;
-
     std::vector<Polygon> population;
     std::vector<Polygon> evaluationResult;
 

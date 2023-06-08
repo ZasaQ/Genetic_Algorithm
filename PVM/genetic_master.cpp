@@ -57,7 +57,6 @@ float randFloat(float min, float max)
     return dis(gen);
 }
 
-// Funkcja losowo rozmieszczajï¿œca wierzchoï¿œki wielokï¿œta
 void randomPlacement(Polygon& polygon, float minX, float maxX, float minY, float maxY)
 {
     for (auto& InVertex : polygon.vertices)
@@ -98,7 +97,6 @@ void initializePolygons(std::vector<Polygon>& population)
 void distributePopulation(std::vector<Polygon>& population)
 {
     int ptid = pvm_mytid();
-    //pvm_init(nullptr, nullptr, 0);
 
     int mutationRate = MUTATION_RATE;
     int generationNum = GENERATIONS_NUM;
