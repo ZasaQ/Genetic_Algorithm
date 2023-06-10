@@ -221,7 +221,7 @@ void receivePopulation(std::vector<Polygon>& population, int& inMutationRate, in
 
     std::vector<Polygon> chunk(chunkSize);
 
-    pvm_upkbyte(chunk.data(), chunkSize * sizeof(Polygon), 1);
+    pvm_upkbyte(reinterpret_cast<char*>(chunk.data()), chunkSize * sizeof(Polygon), 1);
     pvm_upkint(&mutationRate, 1, 1);
     pvm_upkint(&generationNum, 1, 1);
 
@@ -237,10 +237,10 @@ void sendEvaluationResult(const std::vector<Polygon>& results)
     int dataTag = 2;
 
     pvm_initsend(PvmDataDefault);
-    pvm_pkint(results.size(), 1, 1);
+    pvm_pkint(reinterpret_cast<int*>(results.size()), 1, 1);
 
     for (const auto& polygon : results) {
-        pvm_pkbyte(polygon.vertices.data(), polygon.vertices.size() * sizeof(Point), 1);
+        pvm_pkbyte(const_cast<char*>(reinterpret_cast<const char*>(polygon.vertices.data())), polygon.vertices.size() * sizeof(Point), 1);
     }
 
     pvm_send(tid, dataTag);

@@ -118,7 +118,7 @@ void distributePopulation(std::vector<Polygon>& population)
 
         pvm_initsend(PvmDataDefault);
         pvm_pkint(&populationChunkSize, 1, 1);
-        pvm_pkbyte(populationChunk.data(), populationChunkSize * sizeof(Polygon), 1);
+        pvm_pkbyte(reinterpret_cast<char*>(populationChunk.data()), populationChunkSize * sizeof(Polygon), 1);
         pvm_pkint(&mutationRate, 1, 1);
         pvm_pkint(&generationNum, 1, 1);
 
@@ -148,7 +148,7 @@ void receiveEvaluationResults(std::vector<std::vector<Polygon>>& results)
 
             pvm_upkint(&verticesSize, 1, 1);
 
-            pvm_upkbyte(polygon.vertices.data(), verticesSize * sizeof(Point), 1);
+            pvm_upkbyte(reinterpret_cast<char*>(polygon.vertices.data()), verticesSize * sizeof(Point), 1);
 
             slaveResults.push_back(polygon);
         }
