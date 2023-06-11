@@ -99,7 +99,7 @@ void distributePopulation(std::vector<Polygon>& population)
 {
     int ptid = pvm_mytid();
 
-    int mutationRate = MUTATION_RATE;
+    float mutationRate = MUTATION_RATE;
     int generationNum = GENERATIONS_NUM;
 
     int populationSize = population.size();
@@ -120,7 +120,7 @@ void distributePopulation(std::vector<Polygon>& population)
         pvm_initsend(PvmDataDefault);
         pvm_pkint(&populationChunkSize, 1, 1);
         pvm_pkbyte(reinterpret_cast<char*>(populationChunk.data()), populationChunkSize * sizeof(Polygon), 1);
-        pvm_pkint(&mutationRate, 1, 1);
+        pvm_pkfloat(&mutationRate, 1, 1);
         pvm_pkint(&generationNum, 1, 1);
 
         pvm_send(tid, dataTag);
@@ -158,11 +158,11 @@ void receiveEvaluationResults(std::vector<std::vector<Polygon>>& results)
     {
         int tid = ptid + (i + 1);
         int bufSize = 0;
-        clock_t time;
+
+        //std::cout << "xD: " << time;
 
         pvm_probe(tid, dataTag);
         pvm_upkint(&bufSize, 1, 1);
-        pvm_upklong(&time, 1, 1);
 
         std::vector<Polygon> slaveResults;
         slaveResults.reserve(bufSize);
@@ -171,15 +171,15 @@ void receiveEvaluationResults(std::vector<std::vector<Polygon>>& results)
             Polygon polygon;
             int verticesSize = 0;
 
-            pvm_upkint(&verticesSize, 1, 1);
+            //pvm_upkint(&verticesSize, 1, 1);
 
-            pvm_upkbyte(reinterpret_cast<char*>(polygon.vertices.data()), verticesSize * sizeof(Point), 1);
+            pvm_upkbyte(reinterpret_cast<char*>(polygon.vertices.data()), 2 * sizeof(Point), 1);
 
             slaveResults.push_back(polygon);
         }
 
         std::cout << slaveResults << "\n";
-        std::cout << "Time: " << time;
+        //std::cout << "Time: " << time;
 
         results.push_back(slaveResults);
 

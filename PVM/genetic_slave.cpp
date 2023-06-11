@@ -194,7 +194,31 @@ void mutate(std::vector<Polygon>& population, float mutationRate)
     }
 }
 
-std::vector<Polygon> evaluatePolygons(std::vector<Polygon>& population, int numGeneration, float mutationRate)
+void receivePopulation(std::vector<Polygon>& population, int& inGenerationNum, float& inMutationRate) {
+    int tid = pvm_mytid();
+    int dataTag = 1;
+
+    pvm_recv(pvm_parent(), dataTag);
+
+    int chunkSize = 0;
+    float mutationRate = 0.0f;
+    int generationNum = 0;
+
+    pvm_upkint(&chunkSize, 1, 1);
+
+    std::vector<Polygon> chunk(chunkSize);
+
+    pvm_upkbyte(reinterpret_cast<char*>(chunk.data()), chunkSize * sizeof(Polygon), 1);
+    pvm_upkfloat(&mutationRate, 1, 1);
+    pvm_upkint(&generationNum, 1, 1);
+
+    population.insert(population.begin(), chunk.begin(), chunk.end());
+
+    inMutationRate = mutationRate;
+    inGenerationNum = generationNum;
+}
+
+std::vector<Polygon> evaluatePolygons(std::vector<Polygon>& population, int& numGeneration, float& mutationRate)
 {
     for (int generation = 0; generation < numGeneration; ++generation)
     {
@@ -208,56 +232,33 @@ std::vector<Polygon> evaluatePolygons(std::vector<Polygon>& population, int numG
     return population;
 }
 
-void receivePopulation(std::vector<Polygon>& population, int& inMutationRate, int& inGenerationNum) {
-    int tid = pvm_mytid();
-    int dataTag = 1;
-
-    pvm_recv(tid, dataTag);
-
-    int chunkSize;
-    int mutationRate;
-    int generationNum;
-
-    pvm_upkint(&chunkSize, 1, 1);
-
-    std::vector<Polygon> chunk(chunkSize);
-
-    pvm_upkbyte(reinterpret_cast<char*>(chunk.data()), chunkSize * sizeof(Polygon), 1);
-    pvm_upkint(&mutationRate, 1, 1);
-    pvm_upkint(&generationNum, 1, 1);
-
-    population.insert(population.begin(), chunk.begin(), chunk.end());
-
-    inMutationRate = mutationRate;
-    inGenerationNum = generationNum;
-}
-
 void sendEvaluationResult(const std::vector<Polygon>& results, clock_t time)
 {
     int tid = pvm_mytid();
     int dataTag = 2;
 
     pvm_initsend(PvmDataDefault);
+
     pvm_pkint(reinterpret_cast<int*>(results.size()), 1, 1);
-    pvm_pklong(&time, 1, 1);
+    //pvm_pklong(&time, 1, 1);
 
     for (const auto& polygon : results) {
         pvm_pkbyte(const_cast<char*>(reinterpret_cast<const char*>(polygon.vertices.data())), polygon.vertices.size() * sizeof(Point), 1);
     }
 
-    pvm_send(tid, dataTag);
+    pvm_send(pvm_parent(), dataTag);
 }
 
 int main() {
     std::vector<Polygon> population;
     std::vector<Polygon> evaluationResult;
 
-    int mutationRate = 0;
+    float mutationRate = 0.0f;
     int generationNum = 0;
 
     clock_t now = clock();
-    receivePopulation(population, mutationRate, generationNum);
-    evaluationResult = evaluatePolygons(population, mutationRate, generationNum);
+    receivePopulation(population, generationNum, mutationRate);
+    evaluationResult = evaluatePolygons(population, generationNum, mutationRate);
 
     clock_t timer = clock() - now;
     sendEvaluationResult(evaluationResult, timer);
