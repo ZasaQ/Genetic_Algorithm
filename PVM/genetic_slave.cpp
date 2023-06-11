@@ -5,6 +5,7 @@
 #include <random>
 #include <iostream>
 #include <pvm3.h>
+#include <ctime>
 
 struct Point 
 {
@@ -231,13 +232,14 @@ void receivePopulation(std::vector<Polygon>& population, int& inMutationRate, in
     inGenerationNum = generationNum;
 }
 
-void sendEvaluationResult(const std::vector<Polygon>& results)
+void sendEvaluationResult(const std::vector<Polygon>& results, clock_t time)
 {
     int tid = pvm_mytid();
     int dataTag = 2;
 
     pvm_initsend(PvmDataDefault);
     pvm_pkint(reinterpret_cast<int*>(results.size()), 1, 1);
+    pvm_pklong(&time, 1, 1);
 
     for (const auto& polygon : results) {
         pvm_pkbyte(const_cast<char*>(reinterpret_cast<const char*>(polygon.vertices.data())), polygon.vertices.size() * sizeof(Point), 1);
@@ -253,10 +255,12 @@ int main() {
     int mutationRate = 0;
     int generationNum = 0;
 
+    clock_t now = clock();
     receivePopulation(population, mutationRate, generationNum);
     evaluationResult = evaluatePolygons(population, mutationRate, generationNum);
 
-    sendEvaluationResult(evaluationResult);
+    clock_t timer = clock() - now;
+    sendEvaluationResult(evaluationResult, timer);
 
 
     pvm_exit();

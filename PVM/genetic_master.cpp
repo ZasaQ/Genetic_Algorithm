@@ -5,8 +5,9 @@
 #include <random>
 #include <iostream>
 #include <pvm3.h>
+#include <ctime>
 
-#define SLAVE_NUM 10
+#define SLAVE_NUM 1
 #define POPULATION_SIZE 100
 #define GENERATIONS_NUM 3
 #define MUTATION_RATE 0.1f
@@ -126,37 +127,6 @@ void distributePopulation(std::vector<Polygon>& population)
     }
 }
 
-void receiveEvaluationResults(std::vector<std::vector<Polygon>>& results)
-{
-    int ptid = pvm_mytid();
-    int dataTag = 2;
-
-    for (int i = 0; i < SLAVE_NUM; i++)
-    {
-        int tid = ptid + (i + 1);
-        int bufSize = 0;
-
-        pvm_probe(tid, dataTag);
-        pvm_upkint(&bufSize, 1, 1);
-
-        std::vector<Polygon> slaveResults;
-        slaveResults.reserve(bufSize);
-
-        for (int j = 0; j < bufSize; j++) {
-            Polygon polygon;
-            int verticesSize = 0;
-
-            pvm_upkint(&verticesSize, 1, 1);
-
-            pvm_upkbyte(reinterpret_cast<char*>(polygon.vertices.data()), verticesSize * sizeof(Point), 1);
-
-            slaveResults.push_back(polygon);
-        }
-
-        results.push_back(slaveResults);
-    }
-}
-
 std::ostream& operator << (std::ostream& out, std::vector<Polygon>& Polygon)
 {
     int i = 0;
@@ -177,6 +147,44 @@ std::ostream& operator << (std::ostream& out, std::vector<Polygon>& Polygon)
     }
 
     return out;
+}
+
+void receiveEvaluationResults(std::vector<std::vector<Polygon>>& results)
+{
+    int ptid = pvm_mytid();
+    int dataTag = 2;
+
+    for (int i = 0; i < SLAVE_NUM; i++)
+    {
+        int tid = ptid + (i + 1);
+        int bufSize = 0;
+        clock_t time;
+
+        pvm_probe(tid, dataTag);
+        pvm_upkint(&bufSize, 1, 1);
+        pvm_upklong(&time, 1, 1);
+
+        std::vector<Polygon> slaveResults;
+        slaveResults.reserve(bufSize);
+
+        for (int j = 0; j < bufSize; j++) {
+            Polygon polygon;
+            int verticesSize = 0;
+
+            pvm_upkint(&verticesSize, 1, 1);
+
+            pvm_upkbyte(reinterpret_cast<char*>(polygon.vertices.data()), verticesSize * sizeof(Point), 1);
+
+            slaveResults.push_back(polygon);
+        }
+
+        std::cout << slaveResults << "\n";
+        std::cout << "Time: " << time;
+
+        results.push_back(slaveResults);
+
+        std::cout << std::endl;
+    }
 }
 
 int main()
