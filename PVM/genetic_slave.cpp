@@ -195,6 +195,8 @@ void mutate(std::vector<Polygon>& population, float mutationRate)
 }
 
 void receivePopulation(std::vector<Polygon>& population, int& inGenerationNum, float& inMutationRate) {
+    std::cout << "Na poczatku receivePopulation\n";
+
     int tid = pvm_mytid();
     int dataTag = 1;
 
@@ -204,7 +206,11 @@ void receivePopulation(std::vector<Polygon>& population, int& inGenerationNum, f
     float mutationRate = 0.0f;
     int generationNum = 0;
 
+    std::cout << "Przed chunkSize\n";
+
     pvm_upkint(&chunkSize, 1, 1);
+
+    std::cout << "Po chunkSize\n";
 
     std::vector<Polygon> chunk(chunkSize);
 
@@ -212,7 +218,7 @@ void receivePopulation(std::vector<Polygon>& population, int& inGenerationNum, f
     pvm_upkfloat(&mutationRate, 1, 1);
     pvm_upkint(&generationNum, 1, 1);
 
-    population.insert(population.begin(), chunk.begin(), chunk.end());
+    population.insert(population.end(), chunk.begin(), chunk.end());
 
     inMutationRate = mutationRate;
     inGenerationNum = generationNum;
@@ -234,6 +240,8 @@ std::vector<Polygon> evaluatePolygons(std::vector<Polygon>& population, int& num
 
 void sendEvaluationResult(const std::vector<Polygon>& results, clock_t time)
 {
+    std::cout << "Na poczatku sendEvaluationResult\n";
+
     int tid = pvm_mytid();
     int dataTag = 2;
 

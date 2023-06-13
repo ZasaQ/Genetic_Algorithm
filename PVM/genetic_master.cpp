@@ -11,6 +11,7 @@
 #define POPULATION_SIZE 100
 #define GENERATIONS_NUM 3
 #define MUTATION_RATE 0.1f
+#define SLAVE 'genetic_slave'
 
 struct Point 
 {
@@ -97,7 +98,9 @@ void initializePolygons(std::vector<Polygon>& population)
 
 void distributePopulation(std::vector<Polygon>& population)
 {
-    int ptid = pvm_mytid();
+    int pTid = pvm_mytid();
+    int tIds[SLAVE_NUM];
+    int taskNum = pvm_spawn("genetic_slave", nullptr, PvmTaskDefault, "", SLAVE_NUM, tIds);
 
     float mutationRate = MUTATION_RATE;
     int generationNum = GENERATIONS_NUM;
@@ -108,14 +111,12 @@ void distributePopulation(std::vector<Polygon>& population)
     std::vector<Polygon> populationChunk(populationChunkSize);
     int dataTag = 1;
 
-    for (int i = 0; i < SLAVE_NUM; i++)
+    for (int i = 0; i < taskNum; i++)
     {
         int startIndex = i * populationChunkSize;
         int endIndex = (i + 1) * populationChunkSize - 1;
 
         std::copy(population.begin() + startIndex, population.begin() + endIndex + 1, populationChunk.begin());
-
-        int tid = ptid + (i + 1);
 
         pvm_initsend(PvmDataDefault);
         pvm_pkint(&populationChunkSize, 1, 1);
@@ -123,7 +124,7 @@ void distributePopulation(std::vector<Polygon>& population)
         pvm_pkfloat(&mutationRate, 1, 1);
         pvm_pkint(&generationNum, 1, 1);
 
-        pvm_send(tid, dataTag);
+        pvm_send(tIds[i], dataTag);
     }
 }
 
@@ -151,6 +152,8 @@ std::ostream& operator << (std::ostream& out, std::vector<Polygon>& Polygon)
 
 void receiveEvaluationResults(std::vector<std::vector<Polygon>>& results)
 {
+    std::cout << "Na poczatku receiveEvaluationResults\n";
+
     int ptid = pvm_mytid();
     int dataTag = 2;
 
@@ -159,10 +162,13 @@ void receiveEvaluationResults(std::vector<std::vector<Polygon>>& results)
         int tid = ptid + (i + 1);
         int bufSize = 0;
 
-        //std::cout << "xD: " << time;
-
         pvm_probe(tid, dataTag);
+
+        std::cout << "Przed bufSize\n";
+
         pvm_upkint(&bufSize, 1, 1);
+
+        std::cout << "Po bufSize\n";
 
         std::vector<Polygon> slaveResults;
         slaveResults.reserve(bufSize);
@@ -171,9 +177,13 @@ void receiveEvaluationResults(std::vector<std::vector<Polygon>>& results)
             Polygon polygon;
             int verticesSize = 0;
 
-            //pvm_upkint(&verticesSize, 1, 1);
+            std::cout << "Przed verticesSize\n";
 
-            pvm_upkbyte(reinterpret_cast<char*>(polygon.vertices.data()), 2 * sizeof(Point), 1);
+            pvm_upkint(&verticesSize, 1, 1);
+
+            std::cout << "Po verticesSize\n";
+
+            pvm_upkbyte(reinterpret_cast<char*>(polygon.vertices.data()), verticesSize * sizeof(Point), 1);
 
             slaveResults.push_back(polygon);
         }
