@@ -1,4 +1,3 @@
-#include <stdio.h>
 #include <stdlib.h>
 #include <vector>
 #include <numeric>
@@ -7,14 +6,14 @@
 #include <pvm3.h>
 #include <ctime>
 
-struct Point 
+struct Point
 {
     float x, y;
 
     Point(float x, float y) : x(x), y(y) {}
 };
 
-struct Polygon 
+struct Polygon
 {
     std::vector<Point> vertices;
 
@@ -194,13 +193,13 @@ void mutate(std::vector<Polygon>& population, float mutationRate)
     }
 }
 
-void receivePopulation(std::vector<Polygon>& population, int& inGenerationNum, float& inMutationRate) {
-    std::cout << "Na poczatku receivePopulation\n";
+void receiveInitializedPopulation(std::vector<Polygon>& population, int& inGenerationNum, float& inMutationRate)
+{
+    std::cout << "Na poczatku receiveInitializedPopulation\n";
 
     int tid = pvm_mytid();
-    int dataTag = 1;
 
-    pvm_recv(pvm_parent(), dataTag);
+    pvm_recv(pvm_parent(), 2);
 
     int chunkSize = 0;
     float mutationRate = 0.0f;
@@ -238,14 +237,35 @@ std::vector<Polygon> evaluatePolygons(std::vector<Polygon>& population, int& num
     return population;
 }
 
+std::ostream& operator << (std::ostream& out, std::vector<Polygon>& Polygon)
+{
+    int i = 0;
+
+    out << "Num of Polygons: " << Polygon.size() << "\n";
+
+    for (auto& InPolygon : Polygon)
+    {
+        out << "Polygon (" << i << "):\n";
+
+        for (auto& InVertex : InPolygon.vertices)
+        {
+            out << "x = " << InVertex.x << ",\t y = " << InVertex.y << "\n";
+        }
+        i++;
+
+        out << "\n";
+    }
+
+    return out;
+}
+
 void sendEvaluationResult(const std::vector<Polygon>& results, clock_t time)
 {
     std::cout << "Na poczatku sendEvaluationResult\n";
 
     int tid = pvm_mytid();
-    int dataTag = 2;
 
-    pvm_initsend(PvmDataDefault);
+    int activeSBuf = pvm_initsend(PvmDataDefault);
 
     pvm_pkint(reinterpret_cast<int*>(results.size()), 1, 1);
     //pvm_pklong(&time, 1, 1);
@@ -254,7 +274,8 @@ void sendEvaluationResult(const std::vector<Polygon>& results, clock_t time)
         pvm_pkbyte(const_cast<char*>(reinterpret_cast<const char*>(polygon.vertices.data())), polygon.vertices.size() * sizeof(Point), 1);
     }
 
-    pvm_send(pvm_parent(), dataTag);
+    pvm_send(pvm_parent(), tid);
+    pvm_freebuf(activeSBuf);
 }
 
 int main() {
@@ -265,12 +286,13 @@ int main() {
     int generationNum = 0;
 
     clock_t now = clock();
-    receivePopulation(population, generationNum, mutationRate);
+
+    receiveInitializedPopulation(population, generationNum, mutationRate);
     evaluationResult = evaluatePolygons(population, generationNum, mutationRate);
+    std::cout << population;
 
     clock_t timer = clock() - now;
     sendEvaluationResult(evaluationResult, timer);
-
 
     pvm_exit();
     return 0;

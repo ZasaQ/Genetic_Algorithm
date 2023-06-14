@@ -1,26 +1,23 @@
-#include <stdio.h>
 #include <stdlib.h>
 #include <vector>
-#include <numeric>
 #include <random>
 #include <iostream>
 #include <pvm3.h>
-#include <ctime>
 
 #define SLAVE_NUM 1
 #define POPULATION_SIZE 100
 #define GENERATIONS_NUM 3
 #define MUTATION_RATE 0.1f
-#define SLAVE 'genetic_slave'
+#define SLAVE "genetic_slave"
 
-struct Point 
+struct Point
 {
     float x, y;
 
     Point(float x, float y) : x(x), y(y) {}
 };
 
-struct Polygon 
+struct Polygon
 {
     std::vector<Point> vertices;
 
@@ -71,7 +68,7 @@ void randomPlacement(Polygon& polygon, float minX, float maxX, float minY, float
 
 int verticesAmountGeneratedPerPolygon(int min, int max)
 {
-    return min + (rand() % (max - min + 1));
+    return min + rand() % (max - min + 1);
 }
 
 void initializePolygons(std::vector<Polygon>& population)
@@ -98,9 +95,22 @@ void initializePolygons(std::vector<Polygon>& population)
 
 void distributePopulation(std::vector<Polygon>& population)
 {
+    std::cout << "Na poczatku distributePopulation\n";
+
     int pTid = pvm_mytid();
     int tIds[SLAVE_NUM];
-    int taskNum = pvm_spawn("genetic_slave", nullptr, PvmTaskDefault, "", SLAVE_NUM, tIds);
+    int taskNum = pvm_spawn(SLAVE, nullptr, PvmTaskDefault, "", SLAVE_NUM, tIds);
+
+    if (taskNum <= 0)
+    {
+        std::cout << pTid << ": Cant create slaves\n";
+        pvm_perror("pvm_spawn");
+
+        pvm_exit();
+        return;
+    }
+
+    std::cout << "Num of slaves: " << taskNum << "\n";
 
     float mutationRate = MUTATION_RATE;
     int generationNum = GENERATIONS_NUM;
@@ -109,7 +119,6 @@ void distributePopulation(std::vector<Polygon>& population)
     int populationChunkSize = populationSize / SLAVE_NUM;
 
     std::vector<Polygon> populationChunk(populationChunkSize);
-    int dataTag = 1;
 
     for (int i = 0; i < taskNum; i++)
     {
@@ -118,14 +127,16 @@ void distributePopulation(std::vector<Polygon>& population)
 
         std::copy(population.begin() + startIndex, population.begin() + endIndex + 1, populationChunk.begin());
 
-        pvm_initsend(PvmDataDefault);
+        int activeSBuf = pvm_initsend(PvmDataDefault);
         pvm_pkint(&populationChunkSize, 1, 1);
         pvm_pkbyte(reinterpret_cast<char*>(populationChunk.data()), populationChunkSize * sizeof(Polygon), 1);
         pvm_pkfloat(&mutationRate, 1, 1);
         pvm_pkint(&generationNum, 1, 1);
 
-        pvm_send(tIds[i], dataTag);
+        pvm_send(tIds[i], 2);
+        pvm_freebuf(activeSBuf);
     }
+    std::cout << "Na koncu distributePopulation\n";
 }
 
 std::ostream& operator << (std::ostream& out, std::vector<Polygon>& Polygon)
@@ -152,23 +163,22 @@ std::ostream& operator << (std::ostream& out, std::vector<Polygon>& Polygon)
 
 void receiveEvaluationResults(std::vector<std::vector<Polygon>>& results)
 {
-    std::cout << "Na poczatku receiveEvaluationResults\n";
+    //std::cout << "Na poczatku receiveEvaluationResults\n";
 
     int ptid = pvm_mytid();
-    int dataTag = 2;
 
     for (int i = 0; i < SLAVE_NUM; i++)
     {
         int tid = ptid + (i + 1);
         int bufSize = 0;
 
-        pvm_probe(tid, dataTag);
+        pvm_probe(tid, 2);
 
-        std::cout << "Przed bufSize\n";
+        //std::cout << "Przed bufSize\n";
 
         pvm_upkint(&bufSize, 1, 1);
 
-        std::cout << "Po bufSize\n";
+        //std::cout << "Po bufSize\n";
 
         std::vector<Polygon> slaveResults;
         slaveResults.reserve(bufSize);
@@ -177,11 +187,11 @@ void receiveEvaluationResults(std::vector<std::vector<Polygon>>& results)
             Polygon polygon;
             int verticesSize = 0;
 
-            std::cout << "Przed verticesSize\n";
+            //std::cout << "Przed verticesSize\n";
 
             pvm_upkint(&verticesSize, 1, 1);
 
-            std::cout << "Po verticesSize\n";
+            //std::cout << "Po verticesSize\n";
 
             pvm_upkbyte(reinterpret_cast<char*>(polygon.vertices.data()), verticesSize * sizeof(Point), 1);
 
@@ -195,10 +205,12 @@ void receiveEvaluationResults(std::vector<std::vector<Polygon>>& results)
 
         std::cout << std::endl;
     }
+    //std::cout << "Na koncu receiveEvaluationResults\n";
 }
 
 int main()
 {
+    int parentId = pvm_parent();
     std::vector<Point> initialPolygonVertices = {
             {-5.0f, 5.0f},
             {0.0f, 10.0f},
@@ -213,15 +225,20 @@ int main()
             {-10.0f, 0.0f},
             {-7.0f, 2.0f}
     };
+
     Polygon initialPolygon = initialPolygonVertices;
     std::vector<Polygon> population;
     std::vector<std::vector<Polygon>> result;
 
     initializePolygons(population);
-    distributePopulation(population);
 
-    receiveEvaluationResults(result);
+    if ((PvmNoParent == (parentId = pvm_parent())) || ((parentId = pvm_parent()) == -35))
+    {
+        pvm_catchout(stdout);
+        distributePopulation(population);
 
-    pvm_exit();
+        receiveEvaluationResults(result);
+    }
+
     return 0;
 }
