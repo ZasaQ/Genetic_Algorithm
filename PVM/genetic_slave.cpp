@@ -196,26 +196,28 @@ void mutate(std::vector<Polygon>& population, float mutationRate)
 void receiveInitializedPopulation(std::vector<Polygon>& population, int& inGenerationNum, float& inMutationRate)
 {
     std::cout << "Na poczatku receiveInitializedPopulation\n";
-
-    int tid = pvm_mytid();
-
-    pvm_recv(pvm_parent(), 2);
+    int pTid = pvm_parent();
 
     int chunkSize = 0;
     float mutationRate = 0.0f;
     int generationNum = 0;
 
     std::cout << "Przed chunkSize\n";
-
+    pvm_recv(pTid, 1);
     pvm_upkint(&chunkSize, 1, 1);
 
     std::cout << "Po chunkSize\n";
 
     std::vector<Polygon> chunk(chunkSize);
 
-    pvm_upkbyte(reinterpret_cast<char*>(chunk.data()), chunkSize * sizeof(Polygon), 1);
-    pvm_upkfloat(&mutationRate, 1, 1);
-    pvm_upkint(&generationNum, 1, 1);
+    pvm_recv(pTid, 2);
+    pvm_upkbyte(reinterpret_cast<char*>(chunk.data()), chunkSize * sizeof(Polygon), 2);
+
+    pvm_recv(pTid, 3);
+    pvm_upkfloat(&mutationRate, 1, 3);
+
+    pvm_recv(pTid, 4);
+    pvm_upkint(&generationNum, 1, 4);
 
     population.insert(population.end(), chunk.begin(), chunk.end());
 
@@ -285,7 +287,6 @@ int main() {
 
     receiveInitializedPopulation(population, generationNum, mutationRate);
     evaluationResult = evaluatePolygons(population, generationNum, mutationRate);
-    std::cout << population;
 
     clock_t timer = clock() - now;
     sendEvaluationResult(evaluationResult, timer);

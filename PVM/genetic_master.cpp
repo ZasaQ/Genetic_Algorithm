@@ -121,10 +121,10 @@ void distributePopulation(std::vector<Polygon>& population, int (&tIds)[SLAVE_NU
     int populationSize = population.size();
     int populationChunkSize = populationSize / SLAVE_NUM;
 
-    std::vector<Polygon> populationChunk(populationChunkSize);
-
     for (int i = 0; i < taskNum; i++)
     {
+        std::vector<Polygon> populationChunk(populationChunkSize);
+
         int startIndex = i * populationChunkSize;
         int endIndex = (i + 1) * populationChunkSize - 1;
 
@@ -173,15 +173,9 @@ std::ostream& operator << (std::ostream& out, std::vector<Polygon>& Polygon)
 
 void receiveEvaluationResults(std::vector<std::vector<Polygon>>& results, int (&tIds)[SLAVE_NUM])
 {
-    //std::cout << "Na poczatku receiveEvaluationResults\n";
-
-    int ptid = pvm_mytid();
-
     for (int i = 0; i < SLAVE_NUM; i++)
     {
         int bufSize = 0;
-
-        pvm_probe(tIds[i], 2);
 
         //std::cout << "Przed bufSize\n";
         pvm_recv(tIds[i], 1);
@@ -189,8 +183,7 @@ void receiveEvaluationResults(std::vector<std::vector<Polygon>>& results, int (&
 
         //std::cout << "Po bufSize\n";
 
-        std::vector<Polygon> slaveResults;
-        slaveResults.reserve(bufSize);
+        std::vector<Polygon> slaveResults(bufSize);
 
         for (int j = 0; j < bufSize; j++) {
             Polygon polygon;
@@ -243,7 +236,7 @@ int main()
 
     initializePolygons(population);
 
-    if (PvmNoParent == parentId || parentId == -35)
+    if (parentId == PvmNoParent || parentId == -35)
     {
         distributePopulation(population, tIds);
         receiveEvaluationResults(result, tIds);
