@@ -263,19 +263,15 @@ void sendEvaluationResult(const std::vector<Polygon>& results, clock_t time)
 {
     std::cout << "Na poczatku sendEvaluationResult\n";
 
-    int tid = pvm_mytid();
-
-    int activeSBuf = pvm_initsend(PvmDataDefault);
-
+    pvm_initsend(PvmDataDefault);
     pvm_pkint(reinterpret_cast<int*>(results.size()), 1, 1);
-    //pvm_pklong(&time, 1, 1);
+    pvm_send(pvm_parent(), 1);
 
     for (const auto& polygon : results) {
-        pvm_pkbyte(const_cast<char*>(reinterpret_cast<const char*>(polygon.vertices.data())), polygon.vertices.size() * sizeof(Point), 1);
+        pvm_initsend(PvmDataDefault);
+        pvm_pkbyte(const_cast<char*>(reinterpret_cast<const char*>(polygon.vertices.data())), polygon.vertices.size() * sizeof(Point), 2);
+        pvm_send(pvm_parent(), 2);
     }
-
-    pvm_send(pvm_parent(), tid);
-    pvm_freebuf(activeSBuf);
 }
 
 int main() {
