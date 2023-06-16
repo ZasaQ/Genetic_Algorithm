@@ -171,43 +171,17 @@ std::ostream& operator << (std::ostream& out, std::vector<Polygon>& Polygon)
     return out;
 }
 
-void receiveEvaluationResults(std::vector<std::vector<Polygon>>& results, int (&tIds)[SLAVE_NUM])
+void receiveEvaluationResult(std::vector<std::vector<Polygon>>& results, int (&tIds)[SLAVE_NUM])
 {
     for (int i = 0; i < SLAVE_NUM; i++)
     {
-        int bufSize = 0;
+        std::vector<Polygon> receivedPolygons;
 
-        //std::cout << "Przed bufSize\n";
         pvm_recv(tIds[i], 1);
-        pvm_upkint(&bufSize, 1, 1);
+        pvm_upkbyte(reinterpret_cast<char*>(receivedPolygons.data()), receivedPolygons.size() * sizeof(Polygon), 1);
 
-        //std::cout << "Po bufSize\n";
-
-        std::vector<Polygon> slaveResults(bufSize);
-
-        for (int j = 0; j < bufSize; j++) {
-            Polygon polygon;
-            int verticesSize = 0;
-
-            //std::cout << "Przed verticesSize\n";
-            pvm_recv(tIds[i], 2);
-            pvm_upkint(&verticesSize, 1, 2);
-
-            //std::cout << "Po verticesSize\n";
-            pvm_recv(tIds[i], 3);
-            pvm_upkbyte(reinterpret_cast<char*>(polygon.vertices.data()), verticesSize * sizeof(Point), 3);
-
-            slaveResults.push_back(polygon);
-        }
-
-        std::cout << slaveResults << "\n";
-        //std::cout << "Time: " << time;
-
-        results.push_back(slaveResults);
-
-        std::cout << std::endl;
+        results.push_back(receivedPolygons);
     }
-    //std::cout << "Na koncu receiveEvaluationResults\n";
 }
 
 int main()
@@ -239,7 +213,12 @@ int main()
     if (parentId == PvmNoParent || parentId == -35)
     {
         distributePopulation(population, tIds);
-        receiveEvaluationResults(result, tIds);
+        receiveEvaluationResult(result, tIds);
+
+        for (auto& polygons : result)
+        {
+            std::cout << polygons << std::endl;
+        }
     }
 
     return 0;

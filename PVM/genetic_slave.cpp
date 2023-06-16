@@ -261,22 +261,16 @@ std::ostream& operator << (std::ostream& out, std::vector<Polygon>& Polygon)
     return out;
 }
 
-void sendEvaluationResult(const std::vector<Polygon>& results, clock_t time)
+void sendEvaluationResult(std::vector<Polygon>& results, clock_t time)
 {
-    std::cout << "Na poczatku sendEvaluationResult\n";
-
     pvm_initsend(PvmDataDefault);
-    pvm_pkint(reinterpret_cast<int*>(results.size()), 1, 1);
+    pvm_pkbyte(reinterpret_cast<char*>(results.data()), results.size() * sizeof(Polygon), 1);
     pvm_send(pvm_parent(), 1);
-
-    for (const auto& polygon : results) {
-        pvm_initsend(PvmDataDefault);
-        pvm_pkbyte(const_cast<char*>(reinterpret_cast<const char*>(polygon.vertices.data())), polygon.vertices.size() * sizeof(Point), 2);
-        pvm_send(pvm_parent(), 2);
-    }
 }
 
 int main() {
+    srand(time(0) + pvm_mytid());
+
     std::vector<Polygon> population;
     std::vector<Polygon> evaluationResult;
 
