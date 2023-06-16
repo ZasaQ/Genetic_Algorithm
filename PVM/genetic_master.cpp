@@ -93,7 +93,7 @@ void initializePolygons(std::vector<Polygon>& population)
     }
 }
 
-void distributePopulation(std::vector<Polygon>& population, int (&tIds)[SLAVE_NUM])
+void distributePopulation(std::vector<Polygon>& populationToEvaluate, int (&tIds)[SLAVE_NUM])
 {
     std::cout << "Na poczatku distributePopulation\n";
 
@@ -115,7 +115,7 @@ void distributePopulation(std::vector<Polygon>& population, int (&tIds)[SLAVE_NU
 
     std::cout << "Num of slaves: " << taskNum << "\n";
 
-    int populationSize = population.size();
+    int populationSize = populationToEvaluate.size();
     int populationChunkSize = populationSize / SLAVE_NUM;
 
     float mutationRate = MUTATION_RATE;
@@ -128,7 +128,8 @@ void distributePopulation(std::vector<Polygon>& population, int (&tIds)[SLAVE_NU
         int startIndex = i * populationChunkSize;
         int endIndex = (i + 1) * populationChunkSize;
 
-        std::copy(population.begin() + startIndex, population.begin() + endIndex, populationChunk.begin());
+        //std::copy(populationToEvaluate.begin() + startIndex, populationToEvaluate.begin() + endIndex, populationChunk.begin());
+        populationChunk.assign(populationToEvaluate.begin() + startIndex, populationToEvaluate.begin() + endIndex);
 
         pvm_initsend(PvmDataDefault);
         pvm_pkint(&populationChunkSize, 1, 1);
@@ -176,12 +177,12 @@ void receiveEvaluationResult(std::vector<std::vector<Polygon>>& results, int (&t
     for (int i = 0; i < SLAVE_NUM; i++)
     {
         int receivedPolygonSize;
-        pvm_recv(tIds[i], 1);
+        pvm_recv(tIds[0], 1);
         pvm_upkint(&receivedPolygonSize, 1, 1);
 
         std::vector<Polygon> receivedPolygons(receivedPolygonSize);
 
-        pvm_recv(tIds[i], 2);
+        pvm_recv(tIds[0], 2);
         pvm_upkbyte(reinterpret_cast<char*>(receivedPolygons.data()), receivedPolygonSize * sizeof(Polygon), 2);
 
         results.push_back(receivedPolygons);
@@ -191,8 +192,6 @@ void receiveEvaluationResult(std::vector<std::vector<Polygon>>& results, int (&t
 int main()
 {
     int tIds[SLAVE_NUM];
-
-    int parentId = pvm_parent();
     std::vector<Point> initialPolygonVertices = {
             {-5.0f, 5.0f},
             {0.0f, 10.0f},
@@ -213,17 +212,14 @@ int main()
     std::vector<std::vector<Polygon>> result;
 
     initializePolygons(population);
+    distributePopulation(population, tIds);
+    receiveEvaluationResult(result, tIds);
 
-    if (parentId == PvmNoParent || parentId == -35)
+    for (auto& polygons : result)
     {
-        distributePopulation(population, tIds);
-        receiveEvaluationResult(result, tIds);
-
-        for (auto& polygons : result)
-        {
-            std::cout << polygons << std::endl;
-        }
+        std::cout << polygons << std::endl;
     }
 
+    pvm_exit();
     return 0;
 }
