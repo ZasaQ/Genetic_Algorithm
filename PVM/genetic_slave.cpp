@@ -239,28 +239,6 @@ std::vector<Polygon> evaluatePolygons(std::vector<Polygon>& population, int& num
     return population;
 }
 
-std::ostream& operator << (std::ostream& out, std::vector<Polygon>& Polygon)
-{
-    int i = 0;
-
-    out << "Num of Polygons: " << Polygon.size() << "\n";
-
-    for (auto& InPolygon : Polygon)
-    {
-        out << "Polygon (" << i << "):\n";
-
-        for (auto& InVertex : InPolygon.vertices)
-        {
-            out << "x = " << InVertex.x << ",\t y = " << InVertex.y << "\n";
-        }
-        i++;
-
-        out << "\n";
-    }
-
-    return out;
-}
-
 void sendEvaluationResult(std::vector<Polygon>& results, clock_t time)
 {
     pvm_initsend(PvmDataDefault);
