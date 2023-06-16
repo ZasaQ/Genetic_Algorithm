@@ -126,9 +126,9 @@ void distributePopulation(std::vector<Polygon>& population, int (&tIds)[SLAVE_NU
         std::vector<Polygon> populationChunk(populationChunkSize);
 
         int startIndex = i * populationChunkSize;
-        int endIndex = (i + 1) * populationChunkSize - 1;
+        int endIndex = (i + 1) * populationChunkSize;
 
-        std::copy(population.begin() + startIndex, population.begin() + endIndex + 1, populationChunk.begin());
+        std::copy(population.begin() + startIndex, population.begin() + endIndex, populationChunk.begin());
 
         pvm_initsend(PvmDataDefault);
         pvm_pkint(&populationChunkSize, 1, 1);
@@ -175,10 +175,14 @@ void receiveEvaluationResult(std::vector<std::vector<Polygon>>& results, int (&t
 {
     for (int i = 0; i < SLAVE_NUM; i++)
     {
-        std::vector<Polygon> receivedPolygons;
-
+        int receivedPolygonSize;
         pvm_recv(tIds[i], 1);
-        pvm_upkbyte(reinterpret_cast<char*>(receivedPolygons.data()), receivedPolygons.size() * sizeof(Polygon), 1);
+        pvm_upkint(&receivedPolygonSize, 1, 1);
+
+        std::vector<Polygon> receivedPolygons(receivedPolygonSize);
+
+        pvm_recv(tIds[i], 2);
+        pvm_upkbyte(reinterpret_cast<char*>(receivedPolygons.data()), receivedPolygonSize * sizeof(Polygon), 2);
 
         results.push_back(receivedPolygons);
     }

@@ -198,20 +198,20 @@ void receiveInitializedPopulation(std::vector<Polygon>& population, int& inGener
     std::cout << "Na poczatku receiveInitializedPopulation\n";
     int pTid = pvm_parent();
 
-    int chunkSize = 0;
+    int receivedPopulationChunkSize = 0;
     float mutationRate = 0.0f;
     int generationNum = 0;
 
     std::cout << "Przed chunkSize\n";
     pvm_recv(pTid, 1);
-    pvm_upkint(&chunkSize, 1, 1);
+    pvm_upkint(&receivedPopulationChunkSize, 1, 1);
 
     std::cout << "Po chunkSize\n";
 
-    std::vector<Polygon> chunk(chunkSize);
+    std::vector<Polygon> receivedPopulationChunk(receivedPopulationChunkSize);
 
     pvm_recv(pTid, 2);
-    pvm_upkbyte(reinterpret_cast<char*>(chunk.data()), chunkSize * sizeof(Polygon), 2);
+    pvm_upkbyte(reinterpret_cast<char*>(receivedPopulationChunk.data()), receivedPopulationChunkSize * sizeof(Polygon), 2);
 
     pvm_recv(pTid, 3);
     pvm_upkfloat(&mutationRate, 1, 3);
@@ -219,7 +219,7 @@ void receiveInitializedPopulation(std::vector<Polygon>& population, int& inGener
     pvm_recv(pTid, 4);
     pvm_upkint(&generationNum, 1, 4);
 
-    population.insert(population.end(), chunk.begin(), chunk.end());
+    population.insert(population.end(), receivedPopulationChunk.begin(), receivedPopulationChunk.end());
 
     inMutationRate = mutationRate;
     inGenerationNum = generationNum;
@@ -239,11 +239,17 @@ std::vector<Polygon> evaluatePolygons(std::vector<Polygon>& population, int& num
     return population;
 }
 
-void sendEvaluationResult(std::vector<Polygon>& results, clock_t time)
+void sendEvaluationResult(std::vector<Polygon>& result, clock_t time)
 {
+    int resultSize = result.size();
+
     pvm_initsend(PvmDataDefault);
-    pvm_pkbyte(reinterpret_cast<char*>(results.data()), results.size() * sizeof(Polygon), 1);
+    pvm_pkint(&resultSize, 1, 1);
     pvm_send(pvm_parent(), 1);
+
+    pvm_initsend(PvmDataDefault);
+    pvm_pkbyte(reinterpret_cast<char*>(result.data()), resultSize * sizeof(Polygon), 2);
+    pvm_send(pvm_parent(), 2);
 }
 
 int main() {
