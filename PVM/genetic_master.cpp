@@ -115,11 +115,11 @@ void distributePopulation(std::vector<Polygon>& population, int (&tIds)[SLAVE_NU
 
     std::cout << "Num of slaves: " << taskNum << "\n";
 
-    float mutationRate = MUTATION_RATE;
-    int generationNum = GENERATIONS_NUM;
-
     int populationSize = population.size();
     int populationChunkSize = populationSize / SLAVE_NUM;
+
+    float mutationRate = MUTATION_RATE;
+    int generationNum = GENERATIONS_NUM;
 
     for (int i = 0; i < taskNum; i++)
     {
