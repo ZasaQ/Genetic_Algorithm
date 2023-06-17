@@ -72,6 +72,37 @@ int verticesAmountGeneratedPerPolygon(int min, int max)
     return min + rand() % (max - min + 1);
 }
 
+void sendPolygon(Polygon& inPolygon, int inTid, int inDataTag)
+{
+    pvm_initsend(PvmDataDefault);
+    int inPolygonSize = inPolygon.vertices.size();
+
+    for (int i = 0; i < inPolygonSize; i++)
+    {
+        Point& vertex = inPolygon.vertices[i];
+        pvm_pkfloat(&vertex.x, 1, 1);
+        pvm_pkfloat(&vertex.y, 1, 1);
+    }
+
+    pvm_send(inTid, inDataTag);
+}
+
+void receivePolygon(Polygon& inPolygon, int inTid, int inDataTag)
+{
+    pvm_recv(inTid, inDataTag);
+    int inPolygonSize = inPolygon.vertices.size();
+
+    for (int i = 0; i < inPolygonSize; i++)
+    {
+        Point vertex;
+
+        pvm_upkfloat(&vertex.x, 1, inDataTag);
+        pvm_upkfloat(&vertex.y, 1, inDataTag);
+
+        inPolygon.vertices[i] = vertex;
+    }
+}
+
 void initializePolygons(std::vector<Polygon>& population)
 {
     for (int i = 0; i < POPULATION_SIZE; i++)
@@ -180,6 +211,16 @@ std::ostream& operator << (std::ostream& out, std::vector<Polygon>& Polygon)
     return out;
 }
 
+std::ostream& operator << (std::ostream& out, Polygon& Polygon)
+{
+    for (auto& InVertex : Polygon.vertices)
+    {
+        out << "x = " << InVertex.x << ",\t y = " << InVertex.y << "\n";
+    }
+
+    return out;
+}
+
 void receiveEvaluationResult(std::vector<std::vector<Polygon>>& results, int (&tIds)[SLAVE_NUM])
 {
     for (int i = 0; i < SLAVE_NUM; i++)
@@ -233,7 +274,7 @@ int main()
 
     for (auto& polygons : result)
     {
-        std::cout << population << std::endl;
+        std::cout << polygons << std::endl;
     }
 
     pvm_exit();
