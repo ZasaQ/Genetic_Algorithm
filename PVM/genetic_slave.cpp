@@ -195,7 +195,7 @@ void mutate(std::vector<Polygon>& population, float mutationRate)
     }
 }
 
-void sendPolygon(Polygon& inPolygon, int inTid)
+void sendPolygon(Polygon& inPolygon, int inTid, int dataTag)
 {
     int inPolygonSize = inPolygon.vertices.size();
 
@@ -204,15 +204,15 @@ void sendPolygon(Polygon& inPolygon, int inTid)
         Point& vertex = inPolygon.vertices[i];
         pvm_initsend(PvmDataDefault);
         pvm_pkfloat(&vertex.x, 1, 1);
-        pvm_send(inTid, 3);
+        pvm_send(inTid, dataTag);
 
         pvm_initsend(PvmDataDefault);
         pvm_pkfloat(&vertex.y, 1, 1);
-        pvm_send(inTid, 3);
+        pvm_send(inTid, dataTag);
     }
 }
 
-void receivePolygon(Polygon& inPolygon, int inTid)
+void receivePolygon(Polygon& inPolygon, int inTid, int dataTag)
 {
     int inPolygonSize = inPolygon.vertices.size();
 
@@ -220,10 +220,10 @@ void receivePolygon(Polygon& inPolygon, int inTid)
     {
         Point vertex;
 
-        pvm_recv(inTid, 3);
+        pvm_recv(inTid, dataTag);
         pvm_upkfloat(&vertex.x, 1, 1);
 
-        pvm_recv(inTid, 3);
+        pvm_recv(inTid, dataTag);
         pvm_upkfloat(&vertex.y, 1, 1);
 
         inPolygon.vertices[i] = vertex;
@@ -270,7 +270,7 @@ void receiveInitializedPopulation(std::vector<Polygon>& populationToEvaluate, fl
         pvm_pkint(&receivedPopulationChunkSize, 1, 1);
         pvm_send(parentID, 1);
 
-        receivePolygon(receivedPolygonChunk, parentID);
+        receivePolygon(receivedPolygonChunk, parentID, 3);
     }
 
 
@@ -303,19 +303,20 @@ std::vector<Polygon> evaluatePolygons(std::vector<Polygon>& population, float& m
 void sendEvaluationResult(std::vector<Polygon>& evaluationResult)
 {
     int resultSize = evaluationResult.size();
-    resultSize = 12;
     pvm_initsend(PvmDataDefault);
     pvm_pkint(&resultSize, 1, 1);
     pvm_send(parentID, 1);
 
     for (auto& eachEvaluatedPolygon : evaluationResult)
     {
+        /*
         pvm_initsend(PvmDataDefault);
         int eachEvaluatedPolygonVerSize = eachEvaluatedPolygon.vertices.size();
         pvm_pkint(&eachEvaluatedPolygonVerSize, 1, 1);
         pvm_send(parentID, 2);
+        */
 
-        sendPolygon(eachEvaluatedPolygon, parentID);
+        sendPolygon(eachEvaluatedPolygon, parentID, 2);
     }
 }
 
