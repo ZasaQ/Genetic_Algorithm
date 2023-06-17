@@ -243,29 +243,7 @@ void receiveInitializedPopulation(std::vector<Polygon>& populationToEvaluate, fl
 
     std::vector<Polygon> receivedPopulationChunk(receivedPopulationChunkSize);
 
-    /*
-    for (int j = 0; j < receivedPopulationChunkSize; j++) {
-        Polygon receivedPolygonChunk = receivedPopulationChunk[j];
-        pvm_recv(parentID, 2);
-        int eachPolygonChunkVerSize;
-        pvm_upkint(&eachPolygonChunkVerSize, 1, 1);
-
-        pvm_initsend(PvmDataDefault);
-        pvm_pkint(&receivedPopulationChunkSize, 1, 1);
-        pvm_send(parentID, 1);
-
-        //receivePolygon(receivedPolygonChunk, pvm_parent(), 3);
-
-        receivePolygon(receivedPolygonChunk, parentID);
-        populationToEvaluate.push_back(receivedPolygonChunk);
-    }
-    */
-
     for (auto& receivedPolygonChunk : receivedPopulationChunk) {
-        pvm_recv(parentID, 2);
-        int eachPolygonChunkVerSize;
-        pvm_upkint(&eachPolygonChunkVerSize, 1, 1);
-
         pvm_initsend(PvmDataDefault);
         pvm_pkint(&receivedPopulationChunkSize, 1, 1);
         pvm_send(parentID, 1);
@@ -309,13 +287,6 @@ void sendEvaluationResult(std::vector<Polygon>& evaluationResult)
 
     for (auto& eachEvaluatedPolygon : evaluationResult)
     {
-        /*
-        pvm_initsend(PvmDataDefault);
-        int eachEvaluatedPolygonVerSize = eachEvaluatedPolygon.vertices.size();
-        pvm_pkint(&eachEvaluatedPolygonVerSize, 1, 1);
-        pvm_send(parentID, 2);
-        */
-
         sendPolygon(eachEvaluatedPolygon, parentID, 2);
     }
 }

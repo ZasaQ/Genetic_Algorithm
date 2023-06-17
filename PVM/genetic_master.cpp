@@ -5,7 +5,7 @@
 #include <pvm3.h>
 
 #define SLAVE_NUM 1
-#define POPULATION_SIZE 100
+#define POPULATION_SIZE 200
 #define GENERATIONS_NUM 3
 #define MUTATION_RATE 0.1f
 #define SLAVE "genetic_slave"
@@ -193,35 +193,11 @@ void distributePopulation(std::vector<Polygon>& populationToEvaluate, int (&tIds
         int startIndex = i * populationChunkSize;
         int endIndex = (i + 1) * populationChunkSize - 1;
 
-        //std::copy(populationToEvaluate.begin() + startIndex, populationToEvaluate.begin() + endIndex, populationChunk.begin());
         toSendPopulationChunk.assign(populationToEvaluate.begin() + startIndex, populationToEvaluate.begin() + endIndex);
 
         pvm_initsend(PvmDataDefault);
         pvm_pkint(&populationChunkSize, 1, 1);
         pvm_send(tIds[i], 1);
-
-        /*
-        for (int j = 0; j < populationChunkSize; j++)
-        {
-            Polygon toSendEachPolygonChunk = toSendPopulationChunk[j];
-            int eachPolygonChunkVerSize = toSendEachPolygonChunk.vertices.size();
-
-            pvm_initsend(PvmDataDefault);
-            pvm_pkint(&eachPolygonChunkVerSize, 1, 1);
-            pvm_send(tIds[i], 2);
-
-            pvm_recv(tIds[i], 1);
-            pvm_upkint(&a, 1, 1);
-            std::cout << "a: " << a << "\n";
-
-            //sendPolygon(toSendEachPolygonChunk, tIds[i], 3);
-
-            pvm_initsend(PvmDataDefault);
-            pvm_pkbyte(reinterpret_cast<char*>(toSendEachPolygonChunk.vertices.data()), eachPolygonChunkVerSize * sizeof(Point), 1);
-            pvm_send(tIds[i], 3);
-        }
-        */
-
 
         for (auto& toSendEachPolygonChunk : toSendPopulationChunk)
         {
@@ -257,14 +233,6 @@ void receiveEvaluationResult(std::vector<std::vector<Polygon>>& results, int (&t
 
         for (auto& eachReceivedPolygon : receivedPolygons)
         {
-            /*
-            std::cout << "eachReceivedPolygon\n";
-            pvm_recv(tIds[i], 2);
-            int eachReceivedPolygonVerSize;
-            pvm_upkint(&eachReceivedPolygonVerSize, 1, 1);
-            std::cout << "Odebrane i rozpakowane eachReceivedPolygonVerSize\n";
-            */
-
             receivePolygon(eachReceivedPolygon, tIds[i], 2);
         }
 
@@ -298,7 +266,6 @@ int main()
 
     initializePolygons(population);
     distributePopulation(population, tIds);
-    std::cout << tIds[0] << "\n";
     receiveEvaluationResult(result, tIds);
 
     for (auto& polygons : result)
