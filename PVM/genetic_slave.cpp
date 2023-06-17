@@ -10,6 +10,7 @@ struct Point
 {
     float x, y;
 
+    Point() = default;
     Point(float x, float y) : x(x), y(y) {}
 };
 
@@ -60,7 +61,6 @@ std::vector<float> computeLineRectangleIntersections(float p0x, float p0y, float
     return intersections;
 }
 
-// Funkcja zwaracajaca liczbe przeciec miedzy wielokatami, zastosowany zostal tutaj algorytm SAT (Separating Axis Theorem)
 int countIntersections(const Polygon& poly1, const Polygon& poly2)
 {
     int intersectionCount = 0;
@@ -210,14 +210,22 @@ void receiveInitializedPopulation(std::vector<Polygon>& populationToEvaluate, fl
 
     std::vector<Polygon> receivedPopulationChunk(receivedPopulationChunkSize);
 
-    pvm_recv(pTid, 2);
-    pvm_upkbyte(reinterpret_cast<char*>(receivedPopulationChunk.data()), receivedPopulationChunkSize * sizeof(Polygon), 2);
+    for (auto& receivedPolygonChunk : receivedPopulationChunk)
+    {
+        pvm_recv(pTid, 2);
+        int eachPolygonChunkVerticesSize;
+        pvm_upkint(&eachPolygonChunkVerticesSize, 1, 2);
 
-    pvm_recv(pTid, 3);
-    pvm_upkfloat(&mutationRate, 1, 3);
+        pvm_recv(pTid, 3);
+        receivedPolygonChunk.vertices = std::vector<Point>(eachPolygonChunkVerticesSize / sizeof(Point));
+        pvm_upkbyte(reinterpret_cast<char*>(receivedPolygonChunk.vertices.data()), eachPolygonChunkVerticesSize * sizeof(Point), 3);
+    }
 
     pvm_recv(pTid, 4);
-    pvm_upkint(&generationNum, 1, 4);
+    pvm_upkfloat(&mutationRate, 1, 4);
+
+    pvm_recv(pTid, 5);
+    pvm_upkint(&generationNum, 1, 5);
 
     populationToEvaluate.insert(populationToEvaluate.begin(), receivedPopulationChunk.begin(), receivedPopulationChunk.end());
 
@@ -247,9 +255,17 @@ void sendEvaluationResult(std::vector<Polygon>& evaluationResult, clock_t time)
     pvm_pkint(&resultSize, 1, 1);
     pvm_send(pvm_parent(), 1);
 
-    pvm_initsend(PvmDataDefault);
-    pvm_pkbyte(reinterpret_cast<char*>(evaluationResult.data()), resultSize * sizeof(Polygon), 2);
-    pvm_send(pvm_parent(), 2);
+    for (auto& eachEvaluatedPolygon : evaluationResult)
+    {
+        pvm_initsend(PvmDataDefault);
+        int eachEvaluatedPolygonVerSize = eachEvaluatedPolygon.vertices.size();
+        pvm_pkint(&eachEvaluatedPolygonVerSize, 1, 2);
+        pvm_send(pvm_parent(), 2);
+
+        pvm_initsend(PvmDataDefault);
+        pvm_pkbyte(reinterpret_cast<char*>(eachEvaluatedPolygon.vertices.data()), eachEvaluatedPolygonVerSize * sizeof(Point), 3);
+        pvm_send(pvm_parent(), 3);
+    }
 }
 
 int main() {
