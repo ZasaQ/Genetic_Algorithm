@@ -80,23 +80,28 @@ void sendPolygon(Polygon& inPolygon, int inTid, int inDataTag)
     for (int i = 0; i < inPolygonSize; i++)
     {
         Point& vertex = inPolygon.vertices[i];
-        pvm_pkfloat(&vertex.x, 1, 1);
-        pvm_pkfloat(&vertex.y, 1, 1);
-    }
+        pvm_initsend(PvmDataDefault);
+        pvm_pkfloat(&vertex.x, 1, inDataTag);
+        pvm_send(inTid, inDataTag);
 
-    pvm_send(inTid, inDataTag);
+        pvm_initsend(PvmDataDefault);
+        pvm_pkfloat(&vertex.y, 1, inDataTag);
+        pvm_send(inTid, inDataTag);
+    }
 }
 
 void receivePolygon(Polygon& inPolygon, int inTid, int inDataTag)
 {
-    pvm_recv(inTid, inDataTag);
     int inPolygonSize = inPolygon.vertices.size();
 
     for (int i = 0; i < inPolygonSize; i++)
     {
         Point vertex;
 
+        pvm_recv(inTid, inDataTag);
         pvm_upkfloat(&vertex.x, 1, inDataTag);
+
+        pvm_recv(inTid, inDataTag);
         pvm_upkfloat(&vertex.y, 1, inDataTag);
 
         inPolygon.vertices[i] = vertex;
