@@ -26,6 +26,38 @@ struct Polygon
     Polygon(const std::vector<Point>& vertices) : vertices(vertices) {}
 };
 
+std::ostream& operator << (std::ostream& out, std::vector<Polygon>& Polygon)
+{
+    int i = 0;
+
+    out << "Num of Polygons: " << Polygon.size() << "\n";
+
+    for (auto& InPolygon : Polygon)
+    {
+        out << "Polygon (" << i << "):\n";
+
+        for (auto& InVertex : InPolygon.vertices)
+        {
+            out << "x = " << InVertex.x << ",\t y = " << InVertex.y << "\n";
+        }
+        i++;
+
+        out << "\n";
+    }
+
+    return out;
+}
+
+std::ostream& operator << (std::ostream& out, Polygon& Polygon)
+{
+    for (auto& InVertex : Polygon.vertices)
+    {
+        out << "x = " << InVertex.x << ",\t y = " << InVertex.y << "\n";
+    }
+
+    return out;
+}
+
 bool isPolygonConvex(const Polygon& polygon) {
     const std::vector<Point>& vertices = polygon.vertices;
     int vertexCount = vertices.size();
@@ -178,12 +210,11 @@ void distributePopulation(std::vector<Polygon>& populationToEvaluate, int (&tIds
             pvm_pkint(&eachPolygonChunkVerSize, 1, 2);
             pvm_send(tIds[i], 2);
 
-            sendPolygon(toSendEachPolygonChunk, tIds[i], 3);
-            /*
+            //sendPolygon(toSendEachPolygonChunk, tIds[i], 3);
+
             pvm_initsend(PvmDataDefault);
             pvm_pkbyte(reinterpret_cast<char*>(toSendEachPolygonChunk.vertices.data()), eachPolygonChunkVerSize * sizeof(Point), 3);
             pvm_send(tIds[i], 3);
-            */
         }
 
         pvm_initsend(PvmDataDefault);
@@ -195,38 +226,6 @@ void distributePopulation(std::vector<Polygon>& populationToEvaluate, int (&tIds
         pvm_send(tIds[i], 5);
     }
     std::cout << "Na koncu distributePopulation\n";
-}
-
-std::ostream& operator << (std::ostream& out, std::vector<Polygon>& Polygon)
-{
-    int i = 0;
-
-    out << "Num of Polygons: " << Polygon.size() << "\n";
-
-    for (auto& InPolygon : Polygon)
-    {
-        out << "Polygon (" << i << "):\n";
-
-        for (auto& InVertex : InPolygon.vertices)
-        {
-            out << "x = " << InVertex.x << ",\t y = " << InVertex.y << "\n";
-        }
-        i++;
-
-        out << "\n";
-    }
-
-    return out;
-}
-
-std::ostream& operator << (std::ostream& out, Polygon& Polygon)
-{
-    for (auto& InVertex : Polygon.vertices)
-    {
-        out << "x = " << InVertex.x << ",\t y = " << InVertex.y << "\n";
-    }
-
-    return out;
 }
 
 void receiveEvaluationResult(std::vector<std::vector<Polygon>>& results, int (&tIds)[SLAVE_NUM])
@@ -245,12 +244,12 @@ void receiveEvaluationResult(std::vector<std::vector<Polygon>>& results, int (&t
             int eachReceivedPolygonVerSize;
             pvm_upkint(&eachReceivedPolygonVerSize, 1, 2);
 
-            receivePolygon(eachReceivedPolygon, tIds[i], 3);
-            /*
+            //receivePolygon(eachReceivedPolygon, tIds[i], 3);
+
             pvm_recv(tIds[i], 3);
             eachReceivedPolygon.vertices = std::vector<Point>(eachReceivedPolygonVerSize / sizeof(Point));
             pvm_upkbyte(reinterpret_cast<char*>(eachReceivedPolygon.vertices.data()), eachReceivedPolygonVerSize * sizeof(Point), 3);
-            */
+
         }
 
         results.push_back(receivedPolygons);
@@ -274,6 +273,8 @@ int main()
             {-10.0f, 0.0f},
             {-7.0f, 2.0f}
     };
+
+    pvm_catchout(stdout);
 
     Polygon initialPolygon = initialPolygonVertices;
     std::vector<Polygon> population;
