@@ -104,25 +104,24 @@ int verticesAmountGeneratedPerPolygon(int min, int max)
     return min + rand() % (max - min + 1);
 }
 
-void sendPolygon(Polygon& inPolygon, int inTid, int inDataTag)
+void sendPolygon(Polygon& inPolygon, int inTid)
 {
-    pvm_initsend(PvmDataDefault);
     int inPolygonSize = inPolygon.vertices.size();
 
     for (int i = 0; i < inPolygonSize; i++)
     {
         Point& vertex = inPolygon.vertices[i];
         pvm_initsend(PvmDataDefault);
-        pvm_pkfloat(&vertex.x, 1, inDataTag);
-        pvm_send(inTid, inDataTag);
+        pvm_pkfloat(&vertex.x, 1, 1);
+        pvm_send(inTid, 3);
 
         pvm_initsend(PvmDataDefault);
-        pvm_pkfloat(&vertex.y, 1, inDataTag);
-        pvm_send(inTid, inDataTag);
+        pvm_pkfloat(&vertex.y, 1, 1);
+        pvm_send(inTid, 3);
     }
 }
 
-void receivePolygon(Polygon& inPolygon, int inTid, int inDataTag)
+void receivePolygon(Polygon& inPolygon, int inTid)
 {
     int inPolygonSize = inPolygon.vertices.size();
 
@@ -130,11 +129,11 @@ void receivePolygon(Polygon& inPolygon, int inTid, int inDataTag)
     {
         Point vertex;
 
-        pvm_recv(inTid, inDataTag);
-        pvm_upkfloat(&vertex.x, 1, inDataTag);
+        pvm_recv(inTid, 3);
+        pvm_upkfloat(&vertex.x, 1, 1);
 
-        pvm_recv(inTid, inDataTag);
-        pvm_upkfloat(&vertex.y, 1, inDataTag);
+        pvm_recv(inTid, 3);
+        pvm_upkfloat(&vertex.y, 1, 1);
 
         inPolygon.vertices[i] = vertex;
     }
@@ -169,6 +168,7 @@ void distributePopulation(std::vector<Polygon>& populationToEvaluate, int (&tIds
     int pTid = pvm_mytid();
     int num_slaves, num_arch;
     struct pvmhostinfo *slaves;
+    int a = 0;
 
     pvm_config(&num_slaves, &num_arch, &slaves);
     int taskNum = pvm_spawn(SLAVE, (char**)NULL, PvmTaskDefault, "", SLAVE_NUM, tIds);
@@ -193,7 +193,7 @@ void distributePopulation(std::vector<Polygon>& populationToEvaluate, int (&tIds
         std::vector<Polygon> toSendPopulationChunk(populationChunkSize);
 
         int startIndex = i * populationChunkSize;
-        int endIndex = (i + 1) * populationChunkSize;
+        int endIndex = (i + 1) * populationChunkSize - 1;
 
         //std::copy(populationToEvaluate.begin() + startIndex, populationToEvaluate.begin() + endIndex, populationChunk.begin());
         toSendPopulationChunk.assign(populationToEvaluate.begin() + startIndex, populationToEvaluate.begin() + endIndex);
@@ -202,27 +202,47 @@ void distributePopulation(std::vector<Polygon>& populationToEvaluate, int (&tIds
         pvm_pkint(&populationChunkSize, 1, 1);
         pvm_send(tIds[i], 1);
 
+        /*
+        for (int j = 0; j < populationChunkSize; j++)
+        {
+            Polygon toSendEachPolygonChunk = toSendPopulationChunk[j];
+            int eachPolygonChunkVerSize = toSendEachPolygonChunk.vertices.size();
+
+            pvm_initsend(PvmDataDefault);
+            pvm_pkint(&eachPolygonChunkVerSize, 1, 1);
+            pvm_send(tIds[i], 2);
+
+            pvm_recv(tIds[i], 1);
+            pvm_upkint(&a, 1, 1);
+            std::cout << "a: " << a << "\n";
+
+            //sendPolygon(toSendEachPolygonChunk, tIds[i], 3);
+
+            pvm_initsend(PvmDataDefault);
+            pvm_pkbyte(reinterpret_cast<char*>(toSendEachPolygonChunk.vertices.data()), eachPolygonChunkVerSize * sizeof(Point), 1);
+            pvm_send(tIds[i], 3);
+        }
+        */
+
+
         for (auto& toSendEachPolygonChunk : toSendPopulationChunk)
         {
             int eachPolygonChunkVerSize = toSendEachPolygonChunk.vertices.size();
 
             pvm_initsend(PvmDataDefault);
-            pvm_pkint(&eachPolygonChunkVerSize, 1, 2);
+            pvm_pkint(&eachPolygonChunkVerSize, 1, 1);
             pvm_send(tIds[i], 2);
 
-            //sendPolygon(toSendEachPolygonChunk, tIds[i], 3);
-
-            pvm_initsend(PvmDataDefault);
-            pvm_pkbyte(reinterpret_cast<char*>(toSendEachPolygonChunk.vertices.data()), eachPolygonChunkVerSize * sizeof(Point), 3);
-            pvm_send(tIds[i], 3);
+            sendPolygon(toSendEachPolygonChunk, tIds[i]);
         }
 
+
         pvm_initsend(PvmDataDefault);
-        pvm_pkfloat(&mutationRate, 1, 4);
+        pvm_pkfloat(&mutationRate, 1, 1);
         pvm_send(tIds[i], 4);
 
         pvm_initsend(PvmDataDefault);
-        pvm_pkint(&generationNum, 1, 5);
+        pvm_pkint(&generationNum, 1, 1);
         pvm_send(tIds[i], 5);
     }
     std::cout << "Na koncu distributePopulation\n";
@@ -230,26 +250,28 @@ void distributePopulation(std::vector<Polygon>& populationToEvaluate, int (&tIds
 
 void receiveEvaluationResult(std::vector<std::vector<Polygon>>& results, int (&tIds)[SLAVE_NUM])
 {
+    std::cout << "Start receiveEvaluationResult\n";
     for (int i = 0; i < SLAVE_NUM; i++)
     {
+        std::cout << "Start petla, i: " << tIds[i] << "\n";
         int receivedPolygonSize;
         pvm_recv(tIds[i], 1);
+        std::cout << "Odebrane\n";
         pvm_upkint(&receivedPolygonSize, 1, 1);
+        std::cout << "Odebrane i rozpakowane receivedPolygonSize\n";
 
         std::vector<Polygon> receivedPolygons(receivedPolygonSize);
 
         for (auto& eachReceivedPolygon : receivedPolygons)
         {
+            std::cout << "eachReceivedPolygon\n";
             pvm_recv(tIds[i], 2);
             int eachReceivedPolygonVerSize;
-            pvm_upkint(&eachReceivedPolygonVerSize, 1, 2);
+            pvm_upkint(&eachReceivedPolygonVerSize, 1, 1);
+            std::cout << "Odebrane i rozpakowane eachReceivedPolygonVerSize\n";
 
-            //receivePolygon(eachReceivedPolygon, tIds[i], 3);
 
-            pvm_recv(tIds[i], 3);
-            eachReceivedPolygon.vertices = std::vector<Point>(eachReceivedPolygonVerSize / sizeof(Point));
-            pvm_upkbyte(reinterpret_cast<char*>(eachReceivedPolygon.vertices.data()), eachReceivedPolygonVerSize * sizeof(Point), 3);
-
+            receivePolygon(eachReceivedPolygon, tIds[i]);
         }
 
         results.push_back(receivedPolygons);
@@ -282,6 +304,7 @@ int main()
 
     initializePolygons(population);
     distributePopulation(population, tIds);
+    std::cout << tIds[0] << "\n";
     receiveEvaluationResult(result, tIds);
 
     for (auto& polygons : result)

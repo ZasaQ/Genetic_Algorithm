@@ -6,6 +6,8 @@
 #include <pvm3.h>
 #include <ctime>
 
+int parentID;
+
 struct Point
 {
     float x, y;
@@ -193,25 +195,24 @@ void mutate(std::vector<Polygon>& population, float mutationRate)
     }
 }
 
-void sendPolygon(Polygon& inPolygon, int inTid, int inDataTag)
+void sendPolygon(Polygon& inPolygon, int inTid)
 {
-    pvm_initsend(PvmDataDefault);
     int inPolygonSize = inPolygon.vertices.size();
 
     for (int i = 0; i < inPolygonSize; i++)
     {
         Point& vertex = inPolygon.vertices[i];
         pvm_initsend(PvmDataDefault);
-        pvm_pkfloat(&vertex.x, 1, inDataTag);
-        pvm_send(inTid, inDataTag);
+        pvm_pkfloat(&vertex.x, 1, 1);
+        pvm_send(inTid, 3);
 
         pvm_initsend(PvmDataDefault);
-        pvm_pkfloat(&vertex.y, 1, inDataTag);
-        pvm_send(inTid, inDataTag);
+        pvm_pkfloat(&vertex.y, 1, 1);
+        pvm_send(inTid, 3);
     }
 }
 
-void receivePolygon(Polygon& inPolygon, int inTid, int inDataTag)
+void receivePolygon(Polygon& inPolygon, int inTid)
 {
     int inPolygonSize = inPolygon.vertices.size();
 
@@ -219,11 +220,11 @@ void receivePolygon(Polygon& inPolygon, int inTid, int inDataTag)
     {
         Point vertex;
 
-        pvm_recv(inTid, inDataTag);
-        pvm_upkfloat(&vertex.x, 1, inDataTag);
+        pvm_recv(inTid, 3);
+        pvm_upkfloat(&vertex.x, 1, 1);
 
-        pvm_recv(inTid, inDataTag);
-        pvm_upkfloat(&vertex.y, 1, inDataTag);
+        pvm_recv(inTid, 3);
+        pvm_upkfloat(&vertex.y, 1, 1);
 
         inPolygon.vertices[i] = vertex;
     }
@@ -231,38 +232,53 @@ void receivePolygon(Polygon& inPolygon, int inTid, int inDataTag)
 
 void receiveInitializedPopulation(std::vector<Polygon>& populationToEvaluate, float& inMutationRate, int& inGenerationNum)
 {
-    std::cout << "Na poczatku receiveInitializedPopulation\n";
-    int pTid = pvm_parent();
+    int a = 1;
 
     int receivedPopulationChunkSize = 0;
     float mutationRate = 0.0f;
     int generationNum = 0;
 
-    std::cout << "Przed chunkSize\n";
-    pvm_recv(pTid, 1);
+    pvm_recv(parentID, 1);
     pvm_upkint(&receivedPopulationChunkSize, 1, 1);
-
-    std::cout << "Po chunkSize\n";
 
     std::vector<Polygon> receivedPopulationChunk(receivedPopulationChunkSize);
 
-    for (auto& receivedPolygonChunk : receivedPopulationChunk) {
-        pvm_recv(pTid, 2);
+    /*
+    for (int j = 0; j < receivedPopulationChunkSize; j++) {
+        Polygon receivedPolygonChunk = receivedPopulationChunk[j];
+        pvm_recv(parentID, 2);
         int eachPolygonChunkVerSize;
-        pvm_upkint(&eachPolygonChunkVerSize, 1, 2);
+        pvm_upkint(&eachPolygonChunkVerSize, 1, 1);
+
+        pvm_initsend(PvmDataDefault);
+        pvm_pkint(&receivedPopulationChunkSize, 1, 1);
+        pvm_send(parentID, 1);
 
         //receivePolygon(receivedPolygonChunk, pvm_parent(), 3);
 
-        pvm_recv(pTid, 3);
-        receivedPolygonChunk.vertices = std::vector<Point>(eachPolygonChunkVerSize / sizeof(Point));
-        pvm_upkbyte(reinterpret_cast<char*>(receivedPolygonChunk.vertices.data()), eachPolygonChunkVerSize * sizeof(Point), 3);
+        receivePolygon(receivedPolygonChunk, parentID);
+        populationToEvaluate.push_back(receivedPolygonChunk);
+    }
+    */
+
+    for (auto& receivedPolygonChunk : receivedPopulationChunk) {
+        pvm_recv(parentID, 2);
+        int eachPolygonChunkVerSize;
+        pvm_upkint(&eachPolygonChunkVerSize, 1, 1);
+
+        pvm_initsend(PvmDataDefault);
+        pvm_pkint(&receivedPopulationChunkSize, 1, 1);
+        pvm_send(parentID, 1);
+
+        receivePolygon(receivedPolygonChunk, parentID);
     }
 
-    pvm_recv(pTid, 4);
-    pvm_upkfloat(&mutationRate, 1, 4);
 
-    pvm_recv(pTid, 5);
-    pvm_upkint(&generationNum, 1, 5);
+    pvm_recv(parentID, 4);
+    pvm_upkfloat(&mutationRate, 1, 1);
+
+    pvm_recv(parentID, 5);
+    pvm_upkint(&generationNum, 1, 1);
 
     populationToEvaluate.insert(populationToEvaluate.begin(), receivedPopulationChunk.begin(), receivedPopulationChunk.end());
 
@@ -284,31 +300,28 @@ std::vector<Polygon> evaluatePolygons(std::vector<Polygon>& population, float& m
     return population;
 }
 
-void sendEvaluationResult(std::vector<Polygon>& evaluationResult, clock_t time)
+void sendEvaluationResult(std::vector<Polygon>& evaluationResult)
 {
     int resultSize = evaluationResult.size();
-
+    resultSize = 12;
     pvm_initsend(PvmDataDefault);
     pvm_pkint(&resultSize, 1, 1);
-    pvm_send(pvm_parent(), 1);
+    pvm_send(parentID, 1);
 
     for (auto& eachEvaluatedPolygon : evaluationResult)
     {
         pvm_initsend(PvmDataDefault);
         int eachEvaluatedPolygonVerSize = eachEvaluatedPolygon.vertices.size();
-        pvm_pkint(&eachEvaluatedPolygonVerSize, 1, 2);
-        pvm_send(pvm_parent(), 2);
+        pvm_pkint(&eachEvaluatedPolygonVerSize, 1, 1);
+        pvm_send(parentID, 2);
 
-        //sendPolygon(eachEvaluatedPolygon, pvm_parent(), 3);
-
-        pvm_initsend(PvmDataDefault);
-        pvm_pkbyte(reinterpret_cast<char*>(eachEvaluatedPolygon.vertices.data()), eachEvaluatedPolygonVerSize * sizeof(Point), 3);
-        pvm_send(pvm_parent(), 3);
+        sendPolygon(eachEvaluatedPolygon, parentID);
     }
 }
 
 int main() {
     srand(time(0) + pvm_mytid());
+    parentID = pvm_parent();
 
     std::vector<Polygon> populationToEvaluate;
     std::vector<Polygon> evaluationResult;
@@ -316,13 +329,10 @@ int main() {
     float mutationRate = 0.0f;
     int generationNum = 0;
 
-    clock_t now = clock();
-
     receiveInitializedPopulation(populationToEvaluate, mutationRate, generationNum);
     evaluationResult = evaluatePolygons(populationToEvaluate, mutationRate, generationNum);
 
-    clock_t timer = clock() - now;
-    sendEvaluationResult(evaluationResult, timer);
+    sendEvaluationResult(evaluationResult);
 
     pvm_exit();
     return 0;
