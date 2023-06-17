@@ -114,8 +114,6 @@ void distributePopulation(std::vector<Polygon>& populationToEvaluate, int (&tIds
         return;
     }
 
-    std::cout << "Num of slaves: " << taskNum << "\n";
-
     int populationSize = populationToEvaluate.size();
     int populationChunkSize = populationSize / SLAVE_NUM;
 
@@ -136,16 +134,16 @@ void distributePopulation(std::vector<Polygon>& populationToEvaluate, int (&tIds
         pvm_pkint(&populationChunkSize, 1, 1);
         pvm_send(tIds[i], 1);
 
-        for (auto& toSendPolygonChunk : toSendPopulationChunk)
+        for (auto& toSendEachPolygonChunk : toSendPopulationChunk)
         {
-            int eachPolygonChunkVerSize = toSendPolygonChunk.vertices.size();
+            int eachPolygonChunkVerSize = toSendEachPolygonChunk.vertices.size();
 
             pvm_initsend(PvmDataDefault);
             pvm_pkint(&eachPolygonChunkVerSize, 1, 2);
             pvm_send(tIds[i], 2);
 
             pvm_initsend(PvmDataDefault);
-            pvm_pkbyte(reinterpret_cast<char*>(toSendPolygonChunk.vertices.data()), eachPolygonChunkVerSize * sizeof(Point), 3);
+            pvm_pkbyte(reinterpret_cast<char*>(toSendEachPolygonChunk.vertices.data()), eachPolygonChunkVerSize * sizeof(Point), 3);
             pvm_send(tIds[i], 3);
         }
 
@@ -235,7 +233,7 @@ int main()
 
     for (auto& polygons : result)
     {
-        std::cout << polygons << std::endl;
+        std::cout << population << std::endl;
     }
 
     pvm_exit();
