@@ -5,7 +5,7 @@
 #include <pvm3.h>
 
 #define SLAVE_NUM 1
-#define POPULATION_SIZE 200
+#define POPULATION_SIZE 100
 #define GENERATIONS_NUM 3
 #define MUTATION_RATE 0.1f
 #define SLAVE "genetic_slave"
@@ -110,7 +110,8 @@ void sendPolygon(Polygon& inPolygon, int inTid, int dataTag)
 
     for (int i = 0; i < inPolygonSize; i++)
     {
-        Point& vertex = inPolygon.vertices[i];
+        Point vertex = inPolygon.vertices[i];
+
         pvm_initsend(PvmDataDefault);
         pvm_pkfloat(&vertex.x, 1, 1);
         pvm_send(inTid, dataTag);
@@ -124,6 +125,8 @@ void sendPolygon(Polygon& inPolygon, int inTid, int dataTag)
 void receivePolygon(Polygon& inPolygon, int inTid, int dataTag)
 {
     int inPolygonSize = inPolygon.vertices.size();
+
+    std::cout << inPolygonSize << "\n";
 
     for (int i = 0; i < inPolygonSize; i++)
     {
@@ -166,7 +169,6 @@ void distributePopulation(std::vector<Polygon>& populationToEvaluate, int (&tIds
     int pTid = pvm_mytid();
     int num_slaves, num_arch;
     struct pvmhostinfo *slaves;
-    int a = 0;
 
     pvm_config(&num_slaves, &num_arch, &slaves);
     int taskNum = pvm_spawn(SLAVE, (char**)NULL, PvmTaskDefault, "", SLAVE_NUM, tIds);
@@ -201,15 +203,13 @@ void distributePopulation(std::vector<Polygon>& populationToEvaluate, int (&tIds
 
         for (auto& toSendEachPolygonChunk : toSendPopulationChunk)
         {
-            int eachPolygonChunkVerSize = toSendEachPolygonChunk.vertices.size();
-
+            int toSendEachPolygonChunkSize = toSendEachPolygonChunk.vertices.size();
             pvm_initsend(PvmDataDefault);
-            pvm_pkint(&eachPolygonChunkVerSize, 1, 1);
+            pvm_pkint(&toSendEachPolygonChunkSize, 1, 1);
             pvm_send(tIds[i], 2);
 
             sendPolygon(toSendEachPolygonChunk, tIds[i], 3);
         }
-
 
         pvm_initsend(PvmDataDefault);
         pvm_pkfloat(&mutationRate, 1, 1);
@@ -219,25 +219,35 @@ void distributePopulation(std::vector<Polygon>& populationToEvaluate, int (&tIds
         pvm_pkint(&generationNum, 1, 1);
         pvm_send(tIds[i], 5);
     }
+    std::cout << "Dotarl do distributePopulation\n";
 }
 
 void receiveEvaluationResult(std::vector<std::vector<Polygon>>& results, int (&tIds)[SLAVE_NUM])
 {
+    std::cout << "Przed receiveEvaluationResult\n";
     for (int i = 0; i < SLAVE_NUM; i++)
     {
         int receivedPolygonSize;
         pvm_recv(tIds[i], 1);
         pvm_upkint(&receivedPolygonSize, 1, 1);
+        std::cout << "Za receivedPolygonSize\n";
 
         std::vector<Polygon> receivedPolygons(receivedPolygonSize);
 
         for (auto& eachReceivedPolygon : receivedPolygons)
         {
-            receivePolygon(eachReceivedPolygon, tIds[i], 2);
+            int eachReceivedPolygonSize;
+            pvm_recv(tIds[i], 2);
+            pvm_upkint(&eachReceivedPolygonSize, 1, 1);
+
+            eachReceivedPolygon.vertices.reserve(eachReceivedPolygonSize);
+
+            receivePolygon(eachReceivedPolygon, tIds[i], 3);
         }
 
         results.push_back(receivedPolygons);
     }
+    std::cout << "Dotarl do distributePopulation\n";
 }
 
 int main()
