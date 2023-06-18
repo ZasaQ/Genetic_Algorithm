@@ -6,7 +6,7 @@
 
 #define SLAVE_NUM 1
 #define POPULATION_SIZE 200
-#define GENERATIONS_NUM 3
+#define GENERATIONS_NUM 5
 #define MUTATION_RATE 0.1f
 #define SLAVE "genetic_slave"
 
@@ -126,8 +126,6 @@ void receivePolygon(Polygon& inPolygon, int inTid, int dataTag)
 {
     int inPolygonSize = inPolygon.vertices.size();
 
-    std::cout << inPolygonSize << "\n";
-
     for (int i = 0; i < inPolygonSize; i++)
     {
         Point vertex;
@@ -167,10 +165,7 @@ void initializePolygons(std::vector<Polygon>& population)
 void distributePopulation(std::vector<Polygon>& populationToEvaluate, int (&tIds)[SLAVE_NUM])
 {
     int pTid = pvm_mytid();
-    int num_slaves, num_arch;
-    struct pvmhostinfo *slaves;
 
-    pvm_config(&num_slaves, &num_arch, &slaves);
     int taskNum = pvm_spawn(SLAVE, (char**)NULL, PvmTaskDefault, "", SLAVE_NUM, tIds);
 
     if (taskNum <= 0)
@@ -266,6 +261,13 @@ void receiveEvaluationResult(std::vector<Polygon>& results, int (&tIds)[SLAVE_NU
 int main()
 {
     int tIds[SLAVE_NUM];
+    struct timeval start_time, end_time;
+    int num_slaves, num_arch;
+    struct pvmhostinfo *slaves;
+
+    pvm_config(&num_slaves, &num_arch, &slaves);
+    gettimeofday(&start_time, NULL);
+
     std::vector<Point> initialPolygonVertices = {
             {-5.0f, 5.0f},
             {0.0f, 10.0f},
@@ -292,6 +294,15 @@ int main()
     receiveEvaluationResult(result, tIds);
 
     std::cout << result << std::endl;
+
+    gettimeofday(&end_time, NULL);
+    long elapsed_time = (double)(end_time.tv_sec - start_time.tv_sec) * 1000 + ((double)(end_time.tv_usec - start_time.tv_usec) / 1000);
+
+    FILE *fp = fopen("genetic_execution_times.csv", "a");
+    fprintf(fp, "Slaves: %d; Elapsed time: %ld\n", num_slaves - 1, elapsed_time);
+    fclose(fp);
+
+    std::cout << "Num of Slaves used in process: " << num_slaves - 1 << "\nElapsed time: " << elapsed_time << " milliseconds\n";
 
     pvm_exit();
     return 0;
