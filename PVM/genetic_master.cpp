@@ -3,10 +3,11 @@
 #include <random>
 #include <iostream>
 #include <pvm3.h>
+#include <iomanip>
 
 #define SLAVE_NUM 1
-#define POPULATION_SIZE 200
-#define GENERATIONS_NUM 5
+#define POPULATION_SIZE 500
+#define GENERATIONS_NUM 3
 #define MUTATION_RATE 0.1f
 #define SLAVE "genetic_slave"
 
@@ -38,7 +39,7 @@ std::ostream& operator << (std::ostream& out, std::vector<Polygon>& Polygon)
 
         for (auto& InVertex : InPolygon.vertices)
         {
-            out << "x = " << InVertex.x << ",\t y = " << InVertex.y << "\n";
+            out << "x = " << std::setprecision(4) << InVertex.x << ",\t y = " << std::setprecision(4) << InVertex.y << "\n";
         }
         i++;
 
@@ -52,7 +53,7 @@ std::ostream& operator << (std::ostream& out, Polygon& Polygon)
 {
     for (auto& InVertex : Polygon.vertices)
     {
-        out << "x = " << InVertex.x << ",\t y = " << InVertex.y << "\n";
+        out << "x = " << std::setprecision(4) << InVertex.x << ",\t y = " << std::setprecision(4) << InVertex.y << "\n";
     }
 
     return out;

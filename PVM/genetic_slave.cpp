@@ -67,18 +67,18 @@ int countIntersections(const Polygon& poly1, const Polygon& poly2)
 {
     int intersectionCount = 0;
 
-    for (size_t i = 0; i < poly1.vertices.size(); ++i)
+    for (int i = 0; i < poly1.vertices.size(); ++i)
     {
-        size_t j = (i + 1) % poly1.vertices.size();
+        int j = (i + 1) % poly1.vertices.size();
 
         float x0 = poly1.vertices[i].x;
         float y0 = poly1.vertices[i].y;
         float x1 = poly1.vertices[j].x;
         float y1 = poly1.vertices[j].y;
 
-        for (size_t k = 0; k < poly2.vertices.size(); ++k)
+        for (int k = 0; k < poly2.vertices.size(); ++k)
         {
-            size_t l = (k + 1) % poly2.vertices.size();
+            int l = (k + 1) % poly2.vertices.size();
 
             float x2 = poly2.vertices[k].x;
             float y2 = poly2.vertices[k].y;
@@ -97,6 +97,21 @@ int countIntersections(const Polygon& poly1, const Polygon& poly2)
     }
 
     return intersectionCount;
+}
+
+int fitnessFunction(const std::vector<Polygon>& population)
+{
+    int totalIntersections = 0;
+
+    for (int i = 0; i < population.size(); ++i)
+    {
+        for (int j = i + 1; j < population.size(); ++j)
+        {
+            totalIntersections += countIntersections(population[i], population[j]);
+        }
+    }
+
+    return totalIntersections;
 }
 
 std::vector<Polygon> sortPopulation(const std::vector<Polygon>& population)
@@ -152,21 +167,21 @@ std::vector<Polygon> crossover(const std::vector<Polygon>& parents)
         return offspring;
     }
 
-    size_t crossoverPoint = rand() % parents[0].vertices.size();
+    int crossoverPoint = rand() % parents[0].vertices.size();
 
-    for (size_t i = 0; i < parents.size() - 1; i += 2)
+    for (int i = 0; i < parents.size() - 1; i += 2)
     {
         const Polygon& parent1 = parents[i];
         const Polygon& parent2 = parents[i + 1];
 
         Polygon child;
 
-        for (size_t j = 0; j < crossoverPoint; ++j)
+        for (int j = 0; j < crossoverPoint; ++j)
         {
             child.vertices.push_back(parent1.vertices[j]);
         }
 
-        for (size_t j = crossoverPoint; j < parent2.vertices.size(); ++j)
+        for (int j = crossoverPoint; j < parent2.vertices.size(); ++j)
         {
             child.vertices.push_back(parent2.vertices[j]);
         }
