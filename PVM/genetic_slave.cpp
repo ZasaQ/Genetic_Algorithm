@@ -242,15 +242,17 @@ void receiveInitializedPopulation(std::vector<Polygon>& populationToEvaluate, fl
 
     std::vector<Polygon> receivedPopulationChunk(receivedPopulationChunkSize);
 
-    for (auto& eachReceivedPolygon : receivedPopulationChunk)
+    for (int j = 0; j < receivedPopulationChunkSize; j++)
     {
+        Polygon eachReceivedPolygon = receivedPopulationChunk[j];
         int eachReceivedPolygonSize = 0;
         pvm_recv(parentID, 2);
         pvm_upkint(&eachReceivedPolygonSize, 1, 1);
 
-        eachReceivedPolygon.vertices.reserve(eachReceivedPolygonSize);
+        eachReceivedPolygon.vertices.resize(eachReceivedPolygonSize);
 
         receivePolygon(eachReceivedPolygon, parentID, 3);
+        populationToEvaluate.push_back(eachReceivedPolygon);
     }
 
     pvm_recv(parentID, 4);
@@ -258,8 +260,6 @@ void receiveInitializedPopulation(std::vector<Polygon>& populationToEvaluate, fl
 
     pvm_recv(parentID, 5);
     pvm_upkint(&generationNum, 1, 1);
-
-    populationToEvaluate.insert(populationToEvaluate.begin(), receivedPopulationChunk.begin(), receivedPopulationChunk.end());
 
     inMutationRate = mutationRate;
     inGenerationNum = generationNum;
@@ -286,8 +286,10 @@ void sendEvaluationResult(std::vector<Polygon>& evaluationResult)
     pvm_pkint(&resultSize, 1, 1);
     pvm_send(parentID, 1);
 
-    for (auto& eachEvaluatedPolygon : evaluationResult)
+    for (int j = 0; j < resultSize; j++)
     {
+        Polygon eachEvaluatedPolygon = evaluationResult[j];
+
         int eachEvaluatedPolygonSize = eachEvaluatedPolygon.vertices.size();
         pvm_initsend(PvmDataDefault);
         pvm_pkint(&eachEvaluatedPolygonSize, 1, 1);
