@@ -282,16 +282,35 @@ void receiveInitializedPopulation(std::vector<Polygon>& populationToEvaluate, fl
 
 std::vector<Polygon> evaluatePolygons(std::vector<Polygon>& population, float& mutationRate, int& generationNum)
 {
+    int bestFitness = std::numeric_limits<int>::max();
+    std::vector<Polygon> bestIndividuals;
+    int numBestIndividuals = 5;
+
     for (int generation = 0; generation < generationNum; ++generation)
     {
+        int fitness = fitnessFunction(population);
+
+        if (fitness < bestFitness)
+        {
+            bestFitness = fitness;
+            bestIndividuals.clear();
+
+            bestIndividuals.assign(population.begin(), population.end());
+        }
+
         std::vector<Polygon> parents = selection(population, population.size() / 2);
         std::vector<Polygon> offspring = crossover(parents);
 
         mutate(offspring, mutationRate);
         population = offspring;
+
+        if (population.empty())
+        {
+            return bestIndividuals;
+        }
     }
 
-    return population;
+    return bestIndividuals;
 }
 
 void sendEvaluationResult(std::vector<Polygon>& evaluationResult)

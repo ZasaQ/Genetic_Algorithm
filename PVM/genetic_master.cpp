@@ -6,8 +6,8 @@
 #include <iomanip>
 
 #define SLAVE_NUM 1
-#define POPULATION_SIZE 500
-#define GENERATIONS_NUM 3
+#define POPULATION_SIZE 1000
+#define GENERATIONS_NUM 5
 #define MUTATION_RATE 0.1f
 #define SLAVE "genetic_slave"
 
