@@ -163,7 +163,7 @@ void initializePolygons(std::vector<Polygon>& population)
     }
 }
 
-void distributePopulation(std::vector<Polygon>& populationToEvaluate, int (&tIds)[SLAVE_NUM])
+void distributePopulation(std::vector<Polygon>& populationToEvaluate, Polygon& inInitialPolygon, int (&tIds)[SLAVE_NUM])
 {
     int pTid = pvm_mytid();
 
@@ -183,6 +183,8 @@ void distributePopulation(std::vector<Polygon>& populationToEvaluate, int (&tIds
 
     float mutationRate = MUTATION_RATE;
     int generationNum = GENERATIONS_NUM;
+
+    int inInitialPolygonSize = inInitialPolygon.vertices.size();
 
     for (int i = 0; i < taskNum; i++)
     {
@@ -216,6 +218,12 @@ void distributePopulation(std::vector<Polygon>& populationToEvaluate, int (&tIds
         pvm_initsend(PvmDataDefault);
         pvm_pkint(&generationNum, 1, 1);
         pvm_send(tIds[i], 5);
+
+        pvm_initsend(PvmDataDefault);
+        pvm_pkint(&inInitialPolygonSize, 1, 1);
+        pvm_send(tIds[i], 6);
+
+        sendPolygon(inInitialPolygon, tIds[i], 7);
     }
 }
 
@@ -242,20 +250,6 @@ void receiveEvaluationResult(std::vector<Polygon>& results, int (&tIds)[SLAVE_NU
             receivePolygon(eachReceivedPolygon, tIds[i], 3);
             results.push_back(eachReceivedPolygon);
         }
-
-        /*
-        for (auto& eachReceivedPolygon : receivedPolygons)
-        {
-            int eachReceivedPolygonSize;
-            pvm_recv(tIds[i], 2);
-            pvm_upkint(&eachReceivedPolygonSize, 1, 1);
-
-            eachReceivedPolygon.vertices.reserve(eachReceivedPolygonSize);
-
-            receivePolygon(eachReceivedPolygon, tIds[i], 3);
-        }
-        */
-        //results.push_back(receivedPolygons);
     }
 }
 
@@ -291,7 +285,7 @@ int main()
     std::vector<Polygon> result;
 
     initializePolygons(population);
-    distributePopulation(population, tIds);
+    distributePopulation(population, initialPolygon, tIds);
     receiveEvaluationResult(result, tIds);
 
     std::cout << result << std::endl;

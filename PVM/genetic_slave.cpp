@@ -5,6 +5,7 @@
 #include <iostream>
 #include <pvm3.h>
 #include <ctime>
+#include <algorithm>
 
 int parentID;
 
@@ -30,6 +31,15 @@ float randFloat(float min, float max)
     std::mt19937 gen(rd());
     std::uniform_real_distribution<float> dis(min, max);
     return dis(gen);
+}
+
+void removePolygon(std::vector<Polygon>& polygons, const Polygon& polygonToRemove)
+{
+    auto it = std::find(polygons.begin(), polygons.end(), polygonToRemove);
+    if (it != polygons.end())
+    {
+        polygons.erase(it);
+    }
 }
 
 std::vector<float> computeLineRectangleIntersections(float p0x, float p0y, float p1x, float p1y, float r0x, float r0y, float r1x, float r1y)
@@ -97,6 +107,35 @@ int countIntersections(const Polygon& poly1, const Polygon& poly2)
     }
 
     return intersectionCount;
+}
+
+bool isPointInsidePolygon(float x, float y, const Polygon& polygon)
+{
+    int i, j;
+
+    for (i = 0, j = polygon.vertices.size() - 1; i < polygon.vertices.size(); j = i++)
+    {
+        if (((polygon.vertices[i].y > y) != (polygon.vertices[j].y > y)) &&
+            (x < (polygon.vertices[j].x - polygon.vertices[i].x) * (y - polygon.vertices[i].y) / (polygon.vertices[j].y - polygon.vertices[i].y) + polygon.vertices[i].x))
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool isPolygonContained(Polygon& polygon1, const Polygon& polygon2)
+{
+    for (const auto& vertex : polygon1.vertices)
+    {
+        if (!isPointInsidePolygon(vertex.x, vertex.y, polygon2))
+        {
+            return false;
+        }
+    }
+
+    return true;
 }
 
 int fitnessFunction(const std::vector<Polygon>& population)
@@ -246,11 +285,13 @@ void receivePolygon(Polygon& inPolygon, int inTid, int dataTag)
     }
 }
 
-void receiveInitializedPopulation(std::vector<Polygon>& populationToEvaluate, float& inMutationRate, int& inGenerationNum)
+void receiveInitializedPopulation(std::vector<Polygon>& populationToEvaluate, Polygon& inInitPolygon, float& inMutationRate, int& inGenerationNum)
 {
     int receivedPopulationChunkSize = 0;
     float mutationRate = 0.0f;
     int generationNum = 0;
+    Polygon InitPolygon;
+    int InitPolygonSize = 0;
 
     pvm_recv(parentID, 1);
     pvm_upkint(&receivedPopulationChunkSize, 1, 1);
@@ -276,11 +317,19 @@ void receiveInitializedPopulation(std::vector<Polygon>& populationToEvaluate, fl
     pvm_recv(parentID, 5);
     pvm_upkint(&generationNum, 1, 1);
 
+    pvm_recv(parentID, 6);
+    pvm_upkint(&InitPolygonSize, 1, 1);
+
+    inInitPolygon.vertices.resize(InitPolygonSize);
+
+    receivePolygon(inInitPolygon, parentID, 7);
+
     inMutationRate = mutationRate;
     inGenerationNum = generationNum;
+    inInitPolygon = InitPolygon;
 }
 
-std::vector<Polygon> evaluatePolygons(std::vector<Polygon>& population, float& mutationRate, int& generationNum)
+std::vector<Polygon> evaluatePolygons(std::vector<Polygon>& population, Polygon inInitPolygon, float& mutationRate, int& generationNum)
 {
     int bestFitness = std::numeric_limits<int>::max();
     std::vector<Polygon> bestIndividuals;
@@ -303,6 +352,15 @@ std::vector<Polygon> evaluatePolygons(std::vector<Polygon>& population, float& m
 
         mutate(offspring, mutationRate);
         population = offspring;
+
+        for (auto& inPolygon : population)
+        {
+            if (!isPolygonContained(inPolygon, inInitPolygon))
+            {
+                population.(inPolygon);
+            }
+        }
+
 
         if (population.empty())
         {
@@ -337,14 +395,15 @@ int main() {
     srand(time(0) + pvm_mytid());
     parentID = pvm_parent();
 
+    Polygon InitPolygon;
     std::vector<Polygon> populationToEvaluate;
     std::vector<Polygon> evaluationResult;
 
     float mutationRate = 0.0f;
     int generationNum = 0;
 
-    receiveInitializedPopulation(populationToEvaluate, mutationRate, generationNum);
-    evaluationResult = evaluatePolygons(populationToEvaluate, mutationRate, generationNum);
+    receiveInitializedPopulation(populationToEvaluate, InitPolygon, mutationRate, generationNum);
+    evaluationResult = evaluatePolygons(populationToEvaluate, InitPolygon, mutationRate, generationNum);
 
     sendEvaluationResult(evaluationResult);
 
