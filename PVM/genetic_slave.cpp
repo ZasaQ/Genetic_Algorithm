@@ -33,15 +33,6 @@ float randFloat(float min, float max)
     return dis(gen);
 }
 
-void removePolygon(std::vector<Polygon>& polygons, const Polygon& polygonToRemove)
-{
-    auto it = std::find(polygons.begin(), polygons.end(), polygonToRemove);
-    if (it != polygons.end())
-    {
-        polygons.erase(it);
-    }
-}
-
 std::vector<float> computeLineRectangleIntersections(float p0x, float p0y, float p1x, float p1y, float r0x, float r0y, float r1x, float r1y)
 {
     std::vector<float> intersections;
@@ -125,7 +116,7 @@ bool isPointInsidePolygon(float x, float y, const Polygon& polygon)
     return true;
 }
 
-bool isPolygonContained(Polygon& polygon1, const Polygon& polygon2)
+bool isPolygonContained(const Polygon& polygon1, const Polygon& polygon2)
 {
     for (const auto& vertex : polygon1.vertices)
     {
@@ -136,6 +127,15 @@ bool isPolygonContained(Polygon& polygon1, const Polygon& polygon2)
     }
 
     return true;
+}
+
+void removePolygonsOutsideInit(std::vector<Polygon>& population, Polygon& initPolygon)
+{
+    population.erase(std::remove_if(population.begin(), population.end(),
+                                    [&](const Polygon& polygon) {
+                                        return !isPolygonContained(polygon, initPolygon);
+                                    }),
+                     population.end());
 }
 
 int fitnessFunction(const std::vector<Polygon>& population)
@@ -353,15 +353,8 @@ std::vector<Polygon> evaluatePolygons(std::vector<Polygon>& population, Polygon 
         mutate(offspring, mutationRate);
         population = offspring;
 
-        for (auto& inPolygon : population)
-        {
-            if (!isPolygonContained(inPolygon, inInitPolygon))
-            {
-                population.(inPolygon);
-            }
-        }
-
-
+        removePolygonsOutsideInit(population, inInitPolygon);
+        
         if (population.empty())
         {
             return bestIndividuals;
