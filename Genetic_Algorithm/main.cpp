@@ -304,8 +304,8 @@ int main() {
 
     Polygon initialPolygon = initialPolygonVertices;
 
-    int populationSize = 100;
-    int numGenerations = 30;
+    int populationSize = 200;
+    int numGenerations = 3;
     float mutationRate = 0.1f;
 
     std::vector<Polygon> result = geneticAlgorithm(initialPolygon, populationSize, numGenerations, mutationRate);
