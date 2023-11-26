@@ -18,4 +18,8 @@ Program execution steps:
 - **Transmission of Results:** Alle the slaves send their results to master
 
 Results:
+- Max Slave amount: 10
+- Population amount: 100 000
+- Number of Generations: 5
+- Mutation Rate: 0.1
 ![Screenshot_61](https://github.com/ZasaQ/Genetic_Algorithm/assets/83781535/394e102e-04d2-42f0-ab02-5fd96351c697)
