@@ -4,6 +4,10 @@ Purpose of the project: Implementation of a program that operates in distributed
 
 Whole programm is written in C++ and C, for connecting master-role computer with slave-role computers, I have used PVM environment. Istances that were used for testing were setuped in AWS. All the instances' OS is Ubuntu 22.04.3 LTS.
 
+[Genetic_Algorithm/main.cpp](Genetic_Algorithm/main.cpp) stores base main program that works on one instance without using a distributed environment.
+
+[PVM](PVM) stores cpp files (both master and slave) that use PVM distributed environment. Works with g++ compilter.
+
 Program execution steps:
 - **Population Initialization:** The master creates the initial population of polygons and evenly distributes them among nodes.
 - **Population Evaluation:** Each node evaluates its local solutions by calculating the number of overlapping polygons.
