@@ -20,7 +20,6 @@ struct Polygon
     Polygon(const std::vector<Point>& vertices) : vertices(vertices) {}
 };
 
-// Funkcja odpowiadaj¹ca za obliczanie przeciêæ dwóch odcinków
 std::vector<float> computeLineRectangleIntersections(float p0x, float p0y, float p1x, float p1y, float r0x, float r0y, float r1x, float r1y)
 {
     std::vector<float> intersections;
@@ -52,12 +51,10 @@ std::vector<float> computeLineRectangleIntersections(float p0x, float p0y, float
     return intersections;
 }
 
-// Funkcja zwaracj¹ca liczbê przeciêæ miêdzy wielok¹tami, zastosowany zosta³ tutaj algorytm SAT(Separating Axis Theorem)
 int countIntersections(const Polygon& poly1, const Polygon& poly2)
 {
     int intersectionCount = 0;
 
-    // Sprawdzanie przeciêæ dla ka¿dej krawêdzi obu wielok¹tów
     for (size_t i = 0; i < poly1.vertices.size(); ++i)
     {
         size_t j = (i + 1) % poly1.vertices.size();
@@ -90,12 +87,10 @@ int countIntersections(const Polygon& poly1, const Polygon& poly2)
     return intersectionCount;
 }
 
-// Funkcja obliczaj¹ca ocenê dostosowania (fitness) osobnika, im mniejsza liczba przeciêæ, tym lepsze dostosowanie
 int fitnessFunction(const std::vector<Polygon>& population)
 {
     int totalIntersections = 0;
 
-    // Obliczanie liczby przeciêæ dla ka¿dej pary osobników w populacji
     for (size_t i = 0; i < population.size(); ++i)
     {
         for (size_t j = i + 1; j < population.size(); ++j)
@@ -129,10 +124,8 @@ std::vector<Polygon> sortPopulation(const std::vector<Polygon>& population)
     return sortedPopulation;
 }
 
-// Funkcja selekcji osobników
 std::vector<Polygon> selection(const std::vector<Polygon>& population, int numParents)
 {
-    // SprawdŸ poprawnoœæ parametrów
     if (numParents <= 0 || numParents > population.size())
     {
         numParents = population.size() / 2;
@@ -153,7 +146,6 @@ std::vector<Polygon> selection(const std::vector<Polygon>& population, int numPa
     return parents;
 }
 
-// Funkcja krzy¿owania osobników
 std::vector<Polygon> crossover(const std::vector<Polygon>& parents)
 {
     std::vector<Polygon> offspring;
@@ -172,13 +164,11 @@ std::vector<Polygon> crossover(const std::vector<Polygon>& parents)
 
         Polygon child;
 
-        // Kopiujemy czêœæ genotypu z rodzica 1 przed punktem krzy¿owania
         for (size_t j = 0; j < crossoverPoint; ++j)
         {
             child.vertices.push_back(parent1.vertices[j]);
         }
 
-        // Kopiujemy czêœci genotypu z rodzica 2 po punkcie krzy¿owania
         for (size_t j = crossoverPoint; j < parent2.vertices.size(); ++j)
         {
             child.vertices.push_back(parent2.vertices[j]);
@@ -198,7 +188,6 @@ float randFloat(float min, float max)
     return dis(gen);
 }
 
-// Funkcja mutacji osobników
 void mutate(std::vector<Polygon>& population, float mutationRate) 
 {
     for (auto& polygon : population)
@@ -207,7 +196,6 @@ void mutate(std::vector<Polygon>& population, float mutationRate)
         {
             if (randFloat(0, 1) < mutationRate)
             {
-                // Wykonujemy mutacjê z prawdopodobieñstwem mutationRate
                 float newX = vertex.x + randFloat(-1, 1);
                 float newY = vertex.y + randFloat(-1, 1);
 
@@ -218,7 +206,6 @@ void mutate(std::vector<Polygon>& population, float mutationRate)
     }
 }
 
-// Funkcja losowo rozmieszczaj¹ca wierzcho³ki wielok¹ta
 void randomPlacement(Polygon& polygon, float minX, float maxX, float minY, float maxY)
 {
     for (auto& InVertex : polygon.vertices)
@@ -229,7 +216,6 @@ void randomPlacement(Polygon& polygon, float minX, float maxX, float minY, float
     }
 }
 
-// G³ówna funkcja algorytmu genetycznego
 std::vector<Polygon> geneticAlgorithm(const Polygon& initialPolygon, int populationSize, int numGenerations, float mutationRate)
 {
     std::vector<Polygon> population(populationSize);
@@ -237,7 +223,7 @@ std::vector<Polygon> geneticAlgorithm(const Polygon& initialPolygon, int populat
     for (int i = 0; i < populationSize; ++i)
     {
         Polygon polygon = initialPolygon;
-        randomPlacement(polygon, 0.0f, 4.0f, 0.0f, 4.0f); // Losowe rozmieszczenie wierzcho³ków
+        randomPlacement(polygon, 0.0f, 4.0f, 0.0f, 4.0f);
         population[i] = polygon;
     }
 
@@ -246,12 +232,12 @@ std::vector<Polygon> geneticAlgorithm(const Polygon& initialPolygon, int populat
 
     for (int generation = 0; generation < numGenerations; ++generation)
     {
-        int fitness = fitnessFunction(population); // Obliczanie wspó³czynnika fitness dla populacji
+        int fitness = fitnessFunction(population);
 
         if (fitness < bestFitness)
         {
             bestFitness = fitness;
-            bestIndividual = population[0]; // Zak³adamy, ¿e najlepszy osobnik to pierwszy w populacji
+            bestIndividual = population[0];
         }
 
         std::vector<Polygon> parents = selection(population, populationSize / 2);
